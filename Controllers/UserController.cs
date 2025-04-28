@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using OJudge.Data;
 using OJudge.Models;
 using OJudge.Dtos;
+using Microsoft.EntityFrameworkCore.Infrastructure.Internal;
 
 namespace OJudge.Controllers
 {
@@ -51,6 +52,9 @@ namespace OJudge.Controllers
         {
             if (userWithoutId is null)
                 return BadRequest();
+
+            if (await _context.Users.FirstOrDefaultAsync(u => u.NickName == userWithoutId.NickName) is not null)
+                return BadRequest(new { message = "Такой пользователь уже существует." });
 
             var user = new User { NickName = userWithoutId.NickName };
 
