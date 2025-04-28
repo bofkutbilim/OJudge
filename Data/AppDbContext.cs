@@ -10,5 +10,7 @@ namespace OJudge.Data
         {
         }
         public DbSet<User> Users { get; set; }
+        public DbSet<Problem> Problems { get; set; }
+        public DbSet<ProblemPage> ProblemPage { get; set; }
     }
 }

@@ -8,7 +8,7 @@ using OJudge.Dtos;
 namespace OJudge.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/user")]
     public class UsersController : ControllerBase
     {
         private readonly AppDbContext _context;
