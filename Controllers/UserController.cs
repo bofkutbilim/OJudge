@@ -21,7 +21,7 @@ namespace OJudge.Controllers
         /// <summary>
         /// Вывод всех пользователей
         /// </summary>
-        [HttpGet]
+        [HttpGet("get")]
         public async Task<ActionResult<IEnumerable<User>>> GetAllUsers()
         {
             return await _context.Users.ToListAsync();
@@ -30,7 +30,7 @@ namespace OJudge.Controllers
         /// <summary>
         /// Вывод пользователя по id
         /// </summary>
-        [HttpGet("{id}")]
+        [HttpGet("get{id}")]
         public async Task<ActionResult<User>> GetUserById(int id)
         {
             var user = await _context.Users.FindAsync(id);
@@ -46,7 +46,7 @@ namespace OJudge.Controllers
         /// <summary>
         /// добавление пользователя
         /// </summary>
-        [HttpPost]
+        [HttpPost("post")]
         public async Task<ActionResult<User>> CreateUser(UserWithoutId userWithoutId)
         {
             if (userWithoutId is null)
@@ -63,7 +63,7 @@ namespace OJudge.Controllers
         /// <summary>
         /// Изменение пользователя
         /// </summary>
-        [HttpPut("{id}")]
+        [HttpPut("update{id}")]
         public async Task<ActionResult<User>> UpdateUser(int id, UserWithoutId userWithoutId)
         {
 
@@ -96,8 +96,8 @@ namespace OJudge.Controllers
         /// <summary>
         /// удаление пользователя
         /// </summary>
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteUser(int id)
+        [HttpDelete("delete{id}")]
+        public async Task<ActionResult<User>> DeleteUser(int id)
         {
             var user = await _context.Users.FindAsync(id);
             if (user is null)
@@ -108,7 +108,7 @@ namespace OJudge.Controllers
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return user;
         }
 
         private bool UserExists(int id)
