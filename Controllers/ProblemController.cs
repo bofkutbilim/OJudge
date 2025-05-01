@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using OJudge.Data;
 using OJudge.Dtos;
 using OJudge.Models;
+using OJudge.Services;
 
 namespace OJudge.Controllers
 {
@@ -11,10 +12,11 @@ namespace OJudge.Controllers
     [Route("api/problem")]
     public class ProblemController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        public ProblemController(AppDbContext context)
+        private readonly IProblemService _problemService;
+
+        public ProblemController(IProblemService problemService)
         {
-            _context = context;
+            _problemService = problemService;
         }
 
         /// <summary>
@@ -23,7 +25,7 @@ namespace OJudge.Controllers
         [HttpGet("get")]
         public async Task<ActionResult<IEnumerable<Problem>>> GetAllProblems()
         {
-            return await _context.Problems.ToListAsync();
+            return Ok(await _problemService.GetAllAsync());
         }
 
         /// <summary>
@@ -32,14 +34,8 @@ namespace OJudge.Controllers
         [HttpGet("get{id}")]
         public async Task<ActionResult<Problem>> GetProblemById(int id)
         {
-            var problem = await _context.Problems.FindAsync(id);
-
-            if (problem == null)
-            {
-                return NotFound();
-            }
-
-            return problem;
+            var problem = await _problemService.GetByIdAsync(id);
+            return problem == null ? NotFound() : Ok(problem);
         }
 
         /// <summary>
@@ -48,20 +44,9 @@ namespace OJudge.Controllers
         [HttpPost("post")]
         public async Task<ActionResult<Problem>> CreateProblem(ProblemWithoutId problemWithoutId)
         {
-            if (problemWithoutId is null)
-                return BadRequest();
-
-            var problem = new Problem
-            {
-                Title = problemWithoutId.Title,
-                TimeLimitSec = problemWithoutId.TimeLimitSec,
-                MemoryLimitMb = problemWithoutId.MemoryLimitMb
-            };
-
-            _context.Problems.Add(problem);
-            await _context.SaveChangesAsync();
-
-            return problem;
+            if (problemWithoutId == null) return BadRequest();
+            var created = await _problemService.CreateAsync(problemWithoutId);
+            return Ok(created);
         }
 
         /// <summary>
@@ -70,16 +55,8 @@ namespace OJudge.Controllers
         [HttpDelete("delete{id}")]
         public async Task<ActionResult<Problem>> DeleteProblem(int id)
         {
-            var problem = await _context.Problems.FindAsync(id);
-            if (problem is null)
-            {
-                return NotFound();
-            }
-
-            _context.Problems.Remove(problem);
-            await _context.SaveChangesAsync();
-
-            return problem;
+            var deleted = await _problemService.DeleteAsync(id);
+            return deleted == null ? NotFound() : Ok(deleted);
         }
 
         /// <summary>
@@ -88,41 +65,19 @@ namespace OJudge.Controllers
         [HttpPut("update{id}")]
         public async Task<ActionResult<Problem>> UpdateProblem(int id, ProblemWithoutId problemWithoutId)
         {
-
-            var problem = await _context.Problems.FindAsync(id);
-
-            if (problem is null)
-                return NotFound();
-
-            problem.Title = problemWithoutId.Title;
-
-            if (problemWithoutId.TimeLimitSec is not null)
-                problem.TimeLimitSec = problemWithoutId.TimeLimitSec;
-            if (problemWithoutId.TimeLimitSec is not null)
-                problem.MemoryLimitMb = problemWithoutId.MemoryLimitMb;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ProblemExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return problem;
+            var updated = await _problemService.UpdateAsync(id, problemWithoutId);
+            return updated == null ? NotFound() : Ok(updated);
         }
 
-        private bool ProblemExists(int id)
+
+        /// <summary>
+        /// Добавление раздела в задачу
+        /// </summary>
+        [HttpPut("addsection{id}")]
+        public async Task<ActionResult<Problem>> AddSectionToProblem(int id, ProblemPageShortDto dto)
         {
-            return _context.Problems.Any(p => p.Id == id);
+            var updated = await _problemService.AddSectionAsync(id, dto);
+            return updated == null ? NotFound() : Ok(updated);
         }
     }
 }
