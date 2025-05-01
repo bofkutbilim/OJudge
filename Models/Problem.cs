@@ -8,5 +8,6 @@
         public int? MemoryLimitMb { get; set; } = 256;
 
         public List<ProblemPage> ProblemPages { get; set; } = new List<ProblemPage>();
+        public List<Topic> Topics { get; set; } = new();
     }
 }

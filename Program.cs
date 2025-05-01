@@ -1,5 +1,6 @@
 using OJudge.Data;
 using Microsoft.EntityFrameworkCore;
+using OJudge.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,8 +13,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-
+builder.Services.AddScoped<IProblemService, ProblemService>();
+builder.Services.AddScoped<ITopicService, TopicService>();
 builder.Services.AddSwaggerGen();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 
 var app = builder.Build();
 

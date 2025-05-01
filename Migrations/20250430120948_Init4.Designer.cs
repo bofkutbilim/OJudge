@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using OJudge.Data;
 
@@ -10,9 +11,11 @@ using OJudge.Data;
 namespace OJudge.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250430120948_Init4")]
+    partial class Init4
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -105,21 +108,6 @@ namespace OJudge.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("ProblemTopic", b =>
-                {
-                    b.Property<int>("ProblemsId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TopicsId")
-                        .HasColumnType("int");
-
-                    b.HasKey("ProblemsId", "TopicsId");
-
-                    b.HasIndex("TopicsId");
-
-                    b.ToTable("ProblemTopic");
-                });
-
             modelBuilder.Entity("OJudge.Models.ProblemPage", b =>
                 {
                     b.HasOne("OJudge.Models.Problem", "Problem")
@@ -129,21 +117,6 @@ namespace OJudge.Migrations
                         .IsRequired();
 
                     b.Navigation("Problem");
-                });
-
-            modelBuilder.Entity("ProblemTopic", b =>
-                {
-                    b.HasOne("OJudge.Models.Problem", null)
-                        .WithMany()
-                        .HasForeignKey("ProblemsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("OJudge.Models.Topic", null)
-                        .WithMany()
-                        .HasForeignKey("TopicsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("OJudge.Models.Problem", b =>
