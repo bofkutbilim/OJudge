@@ -29,7 +29,7 @@ namespace OJudge.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("MemoryLimitMb")
+                    b.Property<int?>("MemoryLimitMB")
                         .HasColumnType("int");
 
                     b.Property<double?>("TimeLimitSec")
@@ -44,7 +44,7 @@ namespace OJudge.Migrations
                     b.ToTable("Problems");
                 });
 
-            modelBuilder.Entity("OJudge.Models.ProblemPage", b =>
+            modelBuilder.Entity("OJudge.Models.ProblemInformation", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -55,17 +55,17 @@ namespace OJudge.Migrations
                     b.Property<int>("ProblemId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Section")
+                    b.Property<string>("SectionName")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("TextHtml")
+                    b.Property<string>("SectionText")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ProblemId");
 
-                    b.ToTable("ProblemPages");
+                    b.ToTable("ProblemInformations");
                 });
 
             modelBuilder.Entity("OJudge.Models.Topic", b =>
@@ -120,10 +120,10 @@ namespace OJudge.Migrations
                     b.ToTable("ProblemTopic");
                 });
 
-            modelBuilder.Entity("OJudge.Models.ProblemPage", b =>
+            modelBuilder.Entity("OJudge.Models.ProblemInformation", b =>
                 {
                     b.HasOne("OJudge.Models.Problem", "Problem")
-                        .WithMany("ProblemPages")
+                        .WithMany("ProblemInformations")
                         .HasForeignKey("ProblemId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -148,7 +148,7 @@ namespace OJudge.Migrations
 
             modelBuilder.Entity("OJudge.Models.Problem", b =>
                 {
-                    b.Navigation("ProblemPages");
+                    b.Navigation("ProblemInformations");
                 });
 #pragma warning restore 612, 618
         }

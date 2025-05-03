@@ -6,6 +6,6 @@ namespace OJudge.Models
     public class User
     {
         public int Id { get; set; }
-        public string NickName { get; set; } = string.Empty;
+        public required string NickName { get; set; }
     }
 }

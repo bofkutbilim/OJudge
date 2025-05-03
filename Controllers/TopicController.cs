@@ -21,25 +21,25 @@ namespace OJudge.Controllers
             return Ok(await _topicService.GetAllAsync());
         }
 
-        [HttpGet("get{id}")]
-        public async Task<ActionResult<Topic>> GetTopicById(int id)
-        {
-            var topic = await _topicService.GetByIdAsync(id);
-            return topic is null ? NotFound() : Ok(topic);
-        }
+        //[HttpGet("get{id}")]
+        //public async Task<ActionResult<Topic>> GetTopicById(int id)
+        //{
+        //    var topic = await _topicService.GetByIdAsync(id);
+        //    return topic is null ? NotFound() : Ok(topic);
+        //}
 
-        [HttpPost("create")]
-        public async Task<ActionResult<Topic>> CreateTopic(TopicShortDto dto)
+        [HttpPost("post")]
+        public async Task<ActionResult<Topic>> CreateTopic(CreateTopicDto dto)
         {
-            if (dto is null) return null;
+            if (dto is null) return BadRequest();
             var created = await _topicService.CreateAsync(dto);
             return Ok(created);
         }
 
         [HttpPut("update{id}")]
-        public async Task<ActionResult<Topic>> UpdateTopic(int id, TopicShortDto dto)
+        public async Task<ActionResult<Topic>> UpdateTopic(int id, UpdateTopicDto dto)
         {
-            if (dto is null) return null;
+            if (dto is null) return BadRequest();
             var updated = await _topicService.UpdateAsync(id, dto);
             return updated is null ? NotFound() : Ok(updated);
         }

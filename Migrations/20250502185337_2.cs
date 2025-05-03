@@ -5,7 +5,7 @@
 namespace OJudge.Migrations
 {
     /// <inheritdoc />
-    public partial class Init4 : Migration
+    public partial class _2 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
