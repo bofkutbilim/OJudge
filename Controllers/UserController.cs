@@ -48,7 +48,7 @@ namespace OJudge.Controllers
         /// добавление пользователя
         /// </summary>
         [HttpPost("post")]
-        public async Task<ActionResult<User>> CreateUser(UserWithoutId userWithoutId)
+        public async Task<ActionResult<User>> CreateUser(CreateUserDto userWithoutId)
         {
             if (userWithoutId is null)
                 return BadRequest();
@@ -68,7 +68,7 @@ namespace OJudge.Controllers
         /// Изменение пользователя
         /// </summary>
         [HttpPut("update{id}")]
-        public async Task<ActionResult<User>> UpdateUser(int id, UserWithoutId userWithoutId)
+        public async Task<ActionResult<User>> UpdateUser(int id, CreateUserDto userWithoutId)
         {
 
             var user = await _context.Users.FindAsync(id);

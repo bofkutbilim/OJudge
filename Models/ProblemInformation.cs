@@ -2,11 +2,11 @@
 
 namespace OJudge.Models
 {
-    public class ProblemPage
+    public class ProblemInformation
     {
         public int Id { get; set; }
-        public string? Section { get; set; } = string.Empty;
-        public string? TextHtml { get; set; } = string.Empty;
+        public string? SectionName { get; set; } = null;
+        public string? SectionText { get; set; } = null;
 
         [ForeignKey("Problem")]
         public int ProblemId { get; set; }

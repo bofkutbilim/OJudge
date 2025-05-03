@@ -23,7 +23,7 @@ namespace OJudge.Controllers
         /// Вывод всех задач
         /// </summary>
         [HttpGet("get")]
-        public async Task<ActionResult<IEnumerable<Problem>>> GetAllProblems()
+        public async Task<ActionResult<IEnumerable<ProblemShortDto>>> GetAllProblems()
         {
             return Ok(await _problemService.GetAllAsync());
         }
@@ -32,20 +32,20 @@ namespace OJudge.Controllers
         /// Вывод задачи по id
         /// </summary>
         [HttpGet("get{id}")]
-        public async Task<ActionResult<Problem>> GetProblemById(int id)
+        public async Task<ActionResult<ProblemDto>> GetProblemById(int id)
         {
             var problem = await _problemService.GetByIdAsync(id);
-            return problem == null ? NotFound() : Ok(problem);
+            return problem is null ? NotFound() : Ok(problem);
         }
 
         /// <summary>
         /// добавление задачи
         /// </summary>
         [HttpPost("post")]
-        public async Task<ActionResult<Problem>> CreateProblem(ProblemWithoutId problemWithoutId)
+        public async Task<ActionResult<ProblemShortDto>> CreateProblem(CreateProblemDto dto)
         {
-            if (problemWithoutId == null) return BadRequest();
-            var created = await _problemService.CreateAsync(problemWithoutId);
+            if (dto is null) return BadRequest();
+            var created = await _problemService.CreateAsync(dto);
             return Ok(created);
         }
 
@@ -53,7 +53,7 @@ namespace OJudge.Controllers
         /// удалить задачу по id
         /// </summary>
         [HttpDelete("delete{id}")]
-        public async Task<ActionResult<Problem>> DeleteProblem(int id)
+        public async Task<ActionResult<ProblemShortDto>> DeleteProblem(int id)
         {
             var deleted = await _problemService.DeleteAsync(id);
             return deleted == null ? NotFound() : Ok(deleted);
@@ -63,21 +63,43 @@ namespace OJudge.Controllers
         /// Изменение задачи
         /// </summary>
         [HttpPut("update{id}")]
-        public async Task<ActionResult<Problem>> UpdateProblem(int id, ProblemWithoutId problemWithoutId)
+        public async Task<ActionResult<ProblemShortDto>> UpdateProblem(int id, UpdateProblemDto dto)
         {
-            var updated = await _problemService.UpdateAsync(id, problemWithoutId);
+            var updated = await _problemService.UpdateAsync(id, dto);
             return updated == null ? NotFound() : Ok(updated);
         }
 
 
         /// <summary>
-        /// Добавление раздела в задачу
+        /// Добавление темы в задачу
         /// </summary>
-        [HttpPut("addsection{id}")]
-        public async Task<ActionResult<Problem>> AddSectionToProblem(int id, ProblemPageShortDto dto)
+        [HttpPut("addtopic{id}/{topicId}")]
+        public async Task<ActionResult<ProblemDto>> AddTopicToProblem(int id, int topicId)
+        {
+            var updated = await _problemService.AddTopicAsync(id, topicId);
+            return updated is null ? NotFound() : Ok(updated);
+        }
+
+
+        [HttpPut("addinfo{id}")]
+        public async Task<ActionResult<ProblemDto>> AddProblemInformationToProblem(int id, CreateProblemInformationDto dto)
         {
             var updated = await _problemService.AddSectionAsync(id, dto);
-            return updated == null ? NotFound() : Ok(updated);
+            return updated is null ? NotFound() : Ok(updated);
+        }
+
+        [HttpDelete("deletetopic{id}/{topicId}")]
+        public async Task<ActionResult<ProblemDto>> DeleteTopicFromProblem(int id, int topicId)
+        {
+            var changed = await _problemService.DeleteTopicAsync(id, topicId);
+            return changed is null ? NotFound() : Ok(changed);
+        }
+
+        [HttpDelete("deletesection{id}/{sectionId}")]
+        public async Task<ActionResult<ProblemDto>> DeleteProblemInformationFromProblem(int id, int sectionId)
+        {
+            var changed = await _problemService.DeleteSectionAsync(id, sectionId);
+            return changed is null ? NotFound() : Ok(changed);
         }
     }
 }
