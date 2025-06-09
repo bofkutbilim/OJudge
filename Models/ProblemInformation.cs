@@ -7,9 +7,11 @@ namespace OJudge.Models
         public int Id { get; set; }
         public string? SectionName { get; set; } = null;
         public string? SectionText { get; set; } = null;
+        
+        //N:1
 
         [ForeignKey("Problem")]
         public int ProblemId { get; set; }
-        public Problem Problem { get; set; }
+        public required Problem Problem { get; set; }
     }
 }
