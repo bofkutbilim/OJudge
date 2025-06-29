@@ -1,8 +1,9 @@
-![изображение](https://github.com/user-attachments/assets/7dec9985-f1ef-486f-accb-c6d9ca27710d)OJudge
+OJudge
 Swagger
 ![изображение](https://github.com/user-attachments/assets/a5c21fd5-7255-406e-b53a-b50ba90bf501)
 ![изображение](https://github.com/user-attachments/assets/82a41e90-ffd0-48bd-a48c-b8ad043068f9)
 ![изображение](https://github.com/user-attachments/assets/4fc7fb3f-fdee-4cde-9a1e-71175d95ccce)
+![изображение](https://github.com/user-attachments/assets/7dec9985-f1ef-486f-accb-c6d9ca27710d)
 ![изображение](https://github.com/user-attachments/assets/c1da4560-003b-4765-8bd4-2f4af73f02cf)
 ![изображение](https://github.com/user-attachments/assets/4b316ec2-0f3b-4e6a-a9f2-4575b7dc9763)
 ![изображение](https://github.com/user-attachments/assets/b0498e7b-206c-477f-8228-3dd595848fc3)
