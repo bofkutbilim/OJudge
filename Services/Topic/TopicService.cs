@@ -17,21 +17,32 @@ namespace OJudge.Services
         public async Task<IEnumerable<TopicShortDto>> GetAllAsync() {
             var ret = new List<TopicShortDto>();
             foreach (var x in await _context.Topics.ToListAsync())
-                ret.Add(new TopicShortDto { Id = x.Id, Title = x.Title, Description = x.Description });
+                ret.Add(new TopicShortDto {
+                    Id = x.Id,
+                    Title = x.Title,
+                    ShortTitle = x.ShortTitle,
+                    Description = x.Description
+                });
             return ret;
         }
 
-        //public async Task<Topic?> GetByIdAsync(int id) {
-        //    var get = await _context.Topics.FindAsync(id);
-        //    return get;
-        //}
-        public async Task<TopicShortDto?> CreateAsync(CreateTopicDto dto) {
-            if (dto == null) return null;
+        public async Task<Topic?> GetByIdAsync(int id) {
+            var get = await _context.Topics.FindAsync(id);
+            return get;
+        }
+        public async Task<TopicShortDto?> CreateAsync(int mainTopicId, CreateTopicDto dto) {
+            MainTopic? mainTopic = await _context.MainTopics.FindAsync(mainTopicId);
+
+            if (mainTopic is null)
+                return null;
 
             var created = new Topic
             {
                 Title = dto.Title,
-                Description = dto.Description
+                ShortTitle = dto.ShortTitle,
+                Description = dto.Description,
+                MainTopicId = mainTopicId,
+                MainTopic = mainTopic,
             };
 
             await _context.Topics.AddAsync(created);
@@ -41,26 +52,29 @@ namespace OJudge.Services
             {
                 Id = created.Id,
                 Title = created.Title,
+                ShortTitle = created.ShortTitle,
                 Description = created.Description
             };
         }
         public async Task<TopicShortDto?> UpdateAsync(int id, UpdateTopicDto dto)
         {
-            if (dto is null) return null;
-
             var updated = await _context.Topics.FindAsync(id);
             if (updated is null) return null;
 
-            if (dto.Title is not null)
+            if (dto.Title is not null && dto.Title != string.Empty)
                 updated.Title = dto.Title;
-            if (dto.Description is not null)
+            if (dto.ShortTitle is not null && dto.ShortTitle != string.Empty)
+                updated.ShortTitle = dto.ShortTitle;
+            if (dto.Description is not null && dto.Description != string.Empty)
                 updated.Description = dto.Description;
 
             await _context.SaveChangesAsync();
+            
             return new TopicShortDto
             {
                 Id = updated.Id,
                 Title = updated.Title,
+                ShortTitle = updated.ShortTitle,
                 Description = updated.Description
             };
         }
@@ -76,6 +90,7 @@ namespace OJudge.Services
             {
                 Id = topic.Id,
                 Title = topic.Title,
+                ShortTitle = topic.ShortTitle,
                 Description = topic.Description
             };
         }

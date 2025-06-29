@@ -21,18 +21,18 @@ namespace OJudge.Controllers
             return Ok(await _topicService.GetAllAsync());
         }
 
-        //[HttpGet("get{id}")]
-        //public async Task<ActionResult<Topic>> GetTopicById(int id)
-        //{
-        //    var topic = await _topicService.GetByIdAsync(id);
-        //    return topic is null ? NotFound() : Ok(topic);
-        //}
+        [HttpGet("get{id}")]
+        public async Task<ActionResult<Topic>> GetTopicById(int id)
+        {
+            var topic = await _topicService.GetByIdAsync(id);
+            return topic is null ? NotFound() : Ok(topic);
+        }
 
-        [HttpPost("post")]
-        public async Task<ActionResult<Topic>> CreateTopic(CreateTopicDto dto)
+        [HttpPost("post{mainTopicId}")]
+        public async Task<ActionResult<Topic>> CreateTopic(int mainTopicId, CreateTopicDto dto)
         {
             if (dto is null) return BadRequest();
-            var created = await _topicService.CreateAsync(dto);
+            var created = await _topicService.CreateAsync(mainTopicId, dto);
             return Ok(created);
         }
 

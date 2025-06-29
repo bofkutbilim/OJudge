@@ -5,6 +5,7 @@ using OJudge.Data;
 using OJudge.Models;
 using OJudge.Dtos;
 using Microsoft.EntityFrameworkCore.Infrastructure.Internal;
+using OJudge.Services;
 
 namespace OJudge.Controllers
 {
@@ -12,112 +13,80 @@ namespace OJudge.Controllers
     [Route("api/user")]
     public class UsersController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IUserService _userService;
 
-        public UsersController(AppDbContext context)
+        public UsersController(IUserService userService)
         {
-            _context = context;
+            _userService = userService;
         }
 
-        /// <summary>
-        /// Вывод всех пользователей
-        /// </summary>
         [HttpGet("get")]
-        public async Task<ActionResult<IEnumerable<User>>> GetAllUsers()
+        public async Task<ActionResult<IEnumerable<UserRanklistDto>>> GetAllUsers()
         {
-            return await _context.Users.ToListAsync();
+            return Ok(await _userService.GetAllAsync());
         }
 
-        /// <summary>
-        /// Вывод пользователя по id
-        /// </summary>
+        [HttpGet("gettop")]
+        public async Task<ActionResult<IEnumerable<UserRanklistDto>>> GetTopUsers()
+        {
+            return Ok(await _userService.GetAllAsync());
+        }
+
         [HttpGet("get{id}")]
-        public async Task<ActionResult<User>> GetUserById(int id)
+        public async Task<ActionResult<UserProfileDto>> GetUserById(int id)
         {
-            var user = await _context.Users.FindAsync(id);
-
-            if (user == null)
-            {
-                return NotFound();
-            }
-
-            return user;
+            var user = await _userService.GetByIdAsync(id);
+            return user is null ? NotFound() : Ok(user);
         }
 
-        /// <summary>
-        /// добавление пользователя
-        /// </summary>
-        [HttpPost("post")]
-        public async Task<ActionResult<User>> CreateUser(CreateUserDto userWithoutId)
+        [HttpPost("create")]
+        public async Task<ActionResult<User?>> CreateUser(CreateUserDto dto)
         {
-            if (userWithoutId is null)
+            if (dto is null)
                 return BadRequest();
 
-            if (await _context.Users.FirstOrDefaultAsync(u => u.NickName == userWithoutId.NickName) is not null)
-                return BadRequest(new { message = "Такой пользователь уже существует." });
-
-            var user = new User { NickName = userWithoutId.NickName };
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            return user;
+            var created = await _userService.CreateAsync(dto);
+            return created is null ? BadRequest() : Ok(created);
         }
 
-        /// <summary>
-        /// Изменение пользователя
-        /// </summary>
         [HttpPut("update{id}")]
-        public async Task<ActionResult<User>> UpdateUser(int id, CreateUserDto userWithoutId)
+        public async Task<ActionResult<User?>> UpdateUser(int id, UpdateUserDto dto)
         {
-
-            var user = await _context.Users.FindAsync(id);
-
-            if (user is null)
-                return NotFound();
-
-            user.NickName = userWithoutId.NickName;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!UserExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return user;
+            if (dto is null) return BadRequest();
+            var updated = await _userService.UpdateAsync(id, dto);
+            return updated is null ? NotFound() : Ok(updated);
         }
 
-        /// <summary>
-        /// удаление пользователя
-        /// </summary>
-        [HttpDelete("delete{id}")]
-        public async Task<ActionResult<User>> DeleteUser(int id)
+        [HttpDelete("delete")]
+        public async Task<ActionResult<User?>> DeleteUser(int id)
         {
-            var user = await _context.Users.FindAsync(id);
-            if (user is null)
-            {
-                return NotFound();
-            }
-
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
-
-            return user;
+            var deleted = await _userService.DeleteAsync(id);
+            return deleted is null ? NotFound() : Ok(deleted);
         }
 
-        private bool UserExists(int id)
+        [HttpPut("login")]
+        public async Task<ActionResult<User?>> LoginAsync(LoginDataDto dto)
         {
-            return _context.Users.Any(e => e.Id == id);
+            if (dto is null)
+                return BadRequest();
+            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var user = await _userService.LoginAsync(dto, ip);
+            return user is null ? NotFound() : Ok(new { message = "Успешный вход!" });
+        }
+
+        [HttpPut("logout")]
+        public async Task<ActionResult<User?>> LogoutAsync()
+        {
+            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var user = await _userService.LogoutAsync(ip);
+            return user is null ? BadRequest() : Ok(new { message = "Успешный выход!" });
+        }
+
+        [HttpGet("isactive")]
+        public async Task<ActionResult<UserActiveDto?>> IsActiveAsync() {
+            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var user = await _userService.CheckActiveAsync(ip);
+            return user is null ? BadRequest(new { message = "Not Active" }) : Ok(user);
         }
     }
 }
