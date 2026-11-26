@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="scripts" href="js/script.js" /> 
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&family=Roboto&display=swap" rel="stylesheet" />
+  <title>Topic List</title>
+</head>
+<body>
+  <header class="main-header">
+    <nav class="navbar">
+      <div class="nav-left">
+        <ul class="nav-list">
+          <li><a href="archieve.html">АРХИВ</a></li>
+          <li><a href="submissions.html">ПОСЫЛКИ</a></li>
+          <li><a href="topics.html">ТЕМЫ</a></li>
+          <li><a href="ranklist.html">РЕЙТИНГ</a></li>
+        </ul>
+      </div>
+      <div class="nav-right">
+        <div id="login-icon"></div>
+      </div>
+    </nav>
+  </header>
+
+  <br>
+
+  <div class="container">
+    <div class="left_right">
+      <div class="section"><span style="font-size:19pt;">Темы </span><a href="#" class="plus-button" title="Добаить">+</a></div><p></p>
+      <div id="main-topics"></div>
+    </div>
+  </div>
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal-window">
+      <span class="modal-close" onclick="closeModal()" style="font-size:20pt;">×</span>
+      <div class="section" style="text-align:center;">Добавить тему</div><br>
+      <form id="mainTopicForm" onsubmit="addMainTopic(event)">
+        <label for="mainTopicName">Название темы:<br></label>
+        <input type="text" id="mainTopicName" name="mainTopicName" style="width:95%;"required/><br>
+        <button type="submit" style="text-align:center;">Добавить</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
+
+<script>
+  async function loadTopics() {
+    try {
+      const response = await fetch("https://localhost:7003/api/maintopic/get");
+      const data = await response.json();
+
+      const container = document.getElementById('main-topics');
+      container.innerHTML = "";
+
+      data.forEach((mainTopic, index) => {
+        // Main topic header
+        const mainDiv = document.createElement('div');
+        mainDiv.classList.add('section');
+        
+        mainDiv.innerHTML = `<p>${index+1}. ${mainTopic.title}
+              <a href="maintopics/addtopic.html?id=${mainTopic.id}" class="plus-button" title="Добавить">+</a>
+              <a href="maintopics/edit.html?id=${mainTopic.id}" class="edit-button" title="Изменить">✏️</a>
+              <a href="#" class="delete-button" title="Удалить" onclick="removeMainTopic(${mainTopic.id})">🗑️</a></p>`;
+
+
+        const formContainer = document.createElement("div");
+        formContainer.classList.add("form-container");
+        formContainer.style.display = "none"; // скрыта по умолчанию
+        mainDiv.appendChild(formContainer);
+
+        container.appendChild(mainDiv);
+
+        // Topic table
+        if (mainTopic.topics.length > 0) {
+          const table = document.createElement('table');
+          table.classList.add('topic-table');
+
+          const colgroup = document.createElement('colgroup');
+          colgroup.innerHTML = `
+            <col style="width:90px;">
+            <col>
+            <col style="width:130px;">
+            <col style="width:130px;">
+            <col style="width:130px;">
+            <col style="width:130px;">
+            <col style="width:30px;">
+            <col style="width:30px;">
+          `;
+          table.appendChild(colgroup);
+          // Table header
+          const thead = document.createElement('thead');
+          thead.innerHTML = `
+            <tr>
+              <th>#</th>
+              <th>Название</th>
+              <th>Undefined</th>
+              <th>Easy</th>
+              <th>Medium</th>
+              <th>Hard</th>
+              <th></th>
+              <th></th>
+            </tr>`;
+          table.appendChild(thead);
+
+          // Table body
+          const tbody = document.createElement('tbody');
+          let idx = 1
+          mainTopic.topics.forEach(topic => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td style="text-align:center;">${idx}</td>
+              <td><a href="topic.html?id=${topic.id}">${topic.title}</a></td>
+              <td>${topic.undefined}</td>
+              <td>${topic.easy}</td>
+              <td>${topic.medium}</td>
+              <td>${topic.hard}</td>
+              <td><a href="topics/edit.html?id=${topic.id}" class="edit-button" title="Изменить">✏️</a></td>
+              <td><a href="#" class="edit-button" title="Удалить" onclick="removeTopic(${topic.id})">🗑️</a></td>
+            `;
+            idx = idx + 1;
+            tbody.appendChild(row);
+          });
+
+          table.appendChild(tbody);
+          container.appendChild(table);
+        }
+      });
+    } catch(rror) {
+      console.error('Ошибка загрузки тем:', error);
+      document.getElementById('main-topics').innerText = 'Ошибка загрузки тем.';
+    }
+  }
+
+  window.addEventListener("DOMContentLoaded", loadTopics);
+</script>
+
+<script>
+  async function addMainTopic(event) {
+    event.preventDefault();
+    
+    const title = document.getElementById("mainTopicName").value;
+
+    const payload = {
+      title: title
+    };
+
+    try {
+      const response = await fetch("https://localhost:7003/api/maintopic/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        alert("Тема успешно добавлена!");
+        closeModal();
+        document.getElementById("mainTopicForm").reset();
+        
+        loadTopics();
+      } else {
+        const errorText = await response.text();
+        alert("Ошибка при добавлении темы: " + errorText);
+      }
+    } catch (error) {
+      console.error("Ошибка:", error);
+      alert("Произошла ошибка при отправке запроса.");
+    }
+  }
+
+  async function removeTopic(id) {
+    const confirmed = confirm("Вы уверены, что хотите удалить эту подтему?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://localhost:7003/api/topic/delete${id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        loadTopics();
+      } else {
+        alert('Ошибка при удалении:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Ошибка запроса на удаление:', error);
+    }    
+  }
+
+  async function removeMainTopic(id) {
+    const confirmed = confirm("Вы уверены, что хотите удалить эту тему?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://localhost:7003/api/maintopic/delete${id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        loadTopics();
+      } else {
+        alert('Ошибка при удалении:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Ошибка запроса на удаление:', error);
+    }    
+  }
+</script>
+
+<script>
+  async function LogoutSystem() {
+    const response = await fetch("https://localhost:7003/api/user/logout", {
+      method: "PUT"
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      alert(data.message);
+      window.location.href = "topics.html";
+    } else {
+      const error = await response.text();
+      alert("Ошибка входа: " + error);
+    }
+  }
+</script>
+
+<script>
+  async function toMyProfile() {
+    const response = await fetch("https://localhost:7003/api/user/isactive");
+
+    if (response.ok) {
+      const data = await response.json();
+      window.location.href = `users/profile.html?id=${data.userId}`
+    } else {
+      const error = await response.text();
+      alert("Ошибка: " + error);
+    }
+  }
+</script>
+
+<script>
+  fetch("https://localhost:7003/api/user/isactive")
+    .then(response => response.json())
+    .then(data => {
+
+        if (data.message === "Active") {
+          document.getElementById("login-icon").innerHTML = `
+            <u><a href="#" class="login-link" onclick="toMyProfile()">${data.userNickName}</span></u> | 
+            <a href="#" class="login-link" onclick="LogoutSystem()">ВЫЙТИ</a>
+          `
+        } else {
+          document.getElementById("login-icon").innerHTML = `
+            <a href="login.html" class="login-link">ВОЙТИ</a>
+          `
+        }
+    });
+</script>
+
+<script>
+  const modal = document.getElementById("modal-overlay");
+  const plusButton = document.querySelector(".plus-button");
+
+  plusButton.addEventListener("click", (e) => {
+    e.preventDefault(); // Остановить переход по ссылке
+    modal.classList.remove("hidden");
+  });
+
+  function closeModal() {
+    modal.classList.add("hidden");
+  }
+
+  window.addEventListener("click", (e) => {
+  });
+</script>

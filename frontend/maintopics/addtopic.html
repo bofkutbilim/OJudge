@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&family=Roboto&display=swap" rel="stylesheet" />
+  <title>Add Topic</title>
+</head>
+<body>
+  <header class="main-header">
+    <nav class="navbar">
+      <div class="nav-left">
+        <ul class="nav-list">
+          <li><a href="../archieve.html">АРХИВ</a></li>
+          <li><a href="../submissions.html">ПОСЫЛКИ</a></li>
+          <li><a href="../topics.html">ТЕМЫ</a></li>
+          <li><a href="../ranklist.html">РЕЙТИНГ</a></li>
+        </ul>
+      </div>
+      <div class="nav-right">
+        <div id="login-icon"></div>
+      </div>
+    </nav>
+  </header>
+
+  <br>
+
+  <div class="container">
+    <div class="left_right" style="margin-left:500px;margin-right:500px;">
+       <div id="modalHeader" class="section">Загрузка...</div><br><br>
+       <form id="topicForm" onsubmit="addTopic()">
+        <label for="Title">Название подтемы:<br></label>
+        <input type="text" id="Title" name="Title" style="width:95%;" required/><br>
+        <label for="Short">Короткое обозначение:<br></label>
+        <input type="text" id="Short" name="Short" style="width:95%;" required/><br>
+        <label for="Description">Описание:<br></label>
+        <input type="text" id="Description" name="Description" style="width:95%;"/><br>
+        
+        <button type="submit">Добавить</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
+
+<script>
+
+  function getFromUrl(x) {
+    const params = new URLSearchParams(window.location.search);
+    return params.get(x);
+  }
+
+  function loadData() {
+    const id = getFromUrl("id");
+    if (!id) {
+      document.getElementById("modalHeader").textContent = "Тема не выбрана";
+      return;
+    }
+
+    fetch(`https://localhost:7003/api/maintopic/get${id}`)
+    .then(response => {
+      if (!response.ok) throw new Error("Не удалось загрузить тему");
+      return response.json();
+    })
+    .then(mainTopic => {
+      const header = document.getElementById("modalHeader");
+      header.innerHTML = `Добавить подтему для<br><span style="color:red;">${mainTopic.id}. ${mainTopic.title}</span>`;
+    })
+    .catch(err => {
+      console.error(err);
+      document.getElementById("modalHeader").textContent = "Ошибка загрузки темы";
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", loadData);
+
+  async function addTopic() {
+    event.preventDefault();
+
+    const title = document.getElementById("Title").value;
+    const shortTitle = document.getElementById("Short").value;
+    const description = document.getElementById("Description").value;
+
+    const payload = {};
+    payload.title = title;
+    payload.shortTitle = shortTitle;
+    payload.description = description;
+
+    const response = await fetch(`https://localhost:7003/api/topic/post${getFromUrl("id")}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+    if (response.ok) {
+      document.getElementById("topicForm").reset();
+      alert("Изменения сохранены");
+      window.location.href = "../topics.html";
+    } else {
+      alert("Ошибка: " + response.json().message);
+    }
+  }
+
+</script>
+
+<script>
+  async function LogoutSystem() {
+    const response = await fetch("https://localhost:7003/api/user/logout", {
+      method: "PUT"
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      alert(data.message);
+      window.location.href = "archieve.html";
+    } else {
+      const error = await response.text();
+      alert("Ошибка входа: " + error);
+    }
+  }
+</script>
+
+<script>
+  async function toMyProfile() {
+    const response = await fetch("https://localhost:7003/api/user/isactive");
+
+    if (response.ok) {
+      const data = await response.json();
+      window.location.href = `users/profile.html?id=${data.userId}`
+    } else {
+      const error = await response.text();
+      alert("Ошибка: " + error);
+    }
+  }
+</script>
+
+<script>
+  fetch("https://localhost:7003/api/user/isactive")
+    .then(response => response.json())
+    .then(data => {
+
+        if (data.message === "Active") {
+          document.getElementById("login-icon").innerHTML = `
+            <u><a href="#" class="login-link" onclick="toMyProfile()">${data.userNickName}</span></u> | 
+            <a href="#" class="login-link" onclick="LogoutSystem()">ВЫЙТИ</a>
+          `
+        } else {
+          document.getElementById("login-icon").innerHTML = `
+            <a href="login.html" class="login-link">ВОЙТИ</a>
+          `
+        }
+    });
+</script>

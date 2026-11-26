@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="scripts" href="js/script.js" /> 
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&family=Roboto&display=swap" rel="stylesheet" />
+  <title>Submissions List</title>
+</head>
+<body>
+  <header class="main-header">
+    <nav class="navbar">
+      <div class="nav-left">
+        <ul class="nav-list">
+          <li><a href="archieve.html">АРХИВ</a></li>
+          <li><a href="submissions.html">ПОСЫЛКИ</a></li>
+          <li><a href="topics.html">ТЕМЫ</a></li>
+          <li><a href="ranklist.html">РЕЙТИНГ</a></li>
+        </ul>
+      </div>
+      <div class="nav-right">
+        <div id="login-icon"></div>
+      </div>
+    </nav>
+  </header>
+
+  <br>
+
+  <div class="container">
+    <div class="left">
+      <div class="section"><span style="font-size:19pt;">Посылки</span></div><p></p>
+      <table class="submission-table">
+        <colgroup>
+          <col style="width:100px;text-align:center;">
+          <col>
+          <col>
+          <col>
+          <col>
+          <col>
+          <col>
+          <col>
+          <col>
+          <col>
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Кто</th>
+            <th>Задача</th>
+            <th>Вердикт</th>
+            <th>Баллы</th>
+            <th>Тест</th>
+            <th>TL</th>
+            <th>ML</th>
+            <th>Язык</th>
+            <th>Когда</th>
+          </tr>
+        </thead>
+        <tbody id="submission-rows">
+        </tbody>
+      </table>
+    </div>
+    <div class="right">
+      <div class="section">Фильтр Посылок</div>
+      <table class="filter-table">
+        <colgroup>
+          <col style="width: 50%">
+          <col style="width: 50%">
+        </colgroup>
+        <thead>
+          <tr><th>Фильтр по </th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Задача</td><td>
+            <input type="text" id="problem" name="problem" placeholder="Введите Задачу" style="width: 95%;">
+          </td></tr>
+          <tr><td>Вердикт</td><td>
+            <select id="verdict" name="verdict" style="width: 100%">
+              <option value="Wrong Answer">Wrong Answer</option>
+              <option value="Accepted">Accepted</option>
+              <option value="Compile Error">Compile Error</option>
+              <option value="none" selected>-</option>
+            </select>
+          </td></tr>
+          <tr><td>Язык</td><td>
+            <select id="language" name="language" style="width: 100%">
+              <option value="C++ 14 (64x)">C++ 14 (64x)</option>
+              <option value="Java 11">Java 11</option>
+              <option value="Python 3.10">Python 3.10</option>
+              <option value="none" selected>-</option>
+            </select>
+          </td></tr>
+          <tr><td>Пользователь</td><td>
+            <input type="text" id="user" name="user" placeholder="Введите Пользователя" style="width: 95%;" required>
+          </td></tr>
+        </tbody>
+      </table><button onclick="loadSubmissionsFilter()">Поиск</button>
+      <p></p>
+    </div>
+  </div>
+</body>
+</html>
+
+<script>
+  fetch("https://localhost:7003/api/user/isactive")
+    .then(response => response.json())
+    .then(data => {
+
+        if (data.message === "Active") {
+          document.getElementById("login-icon").innerHTML = `
+            <u><a href="#" class="login-link" onclick="toMyProfile()">${data.userNickName}</span></u> | 
+            <a href="#" class="login-link" onclick="LogoutSystem()">ВЫЙТИ</a>
+          `
+        } else {
+          document.getElementById("login-icon").innerHTML = `
+            <a href="login.html" class="login-link">ВОЙТИ</a>
+          `
+        }
+    });
+</script>
+
+<script>
+
+  window.addEventListener("DOMContentLoaded", loadSubmissions);
+
+  async function loadSubmissions() {
+    fetch("https://localhost:7003/api/submission/get")
+      .then(response => response.json())
+      .then(submissions => {
+        const tableBody = document.getElementById("submission-rows");
+        tableBody.innerHTML = "";
+
+        submissions.forEach(x => {
+          const row = document.createElement("tr");
+
+          let pr = x.problemId + "." + x.problemTitle;
+          const date = new Date(x.received);
+          date.setHours(date.getHours() + 6);
+          let Color = "black";
+
+          if (x.verdictTitle === "Accepted") {
+            Color = "green";
+          } else if (x.verdictTitle === "Time Limit" || x.verdictTitle === "Memory Limit" || x.verdictTitle === "Runtime Error" || x.verdictTitle === "Presentation Error" || x.verdictTitle === "Wrong Answer") {
+            Color = "red";
+          } else if (x.verdictTitle === "Compile Error") {
+            Color = "blue";
+          }
+
+          row.innerHTML = `
+            <td style="text-align:center;"><a href="submission.html?id=${x.id}">${x.id}</a></td>
+            <td><a href="users/profile.html?id=${x.userId}">${x.userNickName}</a></td>
+            <td><a href="problem.html?id=${x.problemId}">${pr}</a></td>
+            <td style="text-align:center; color:${Color};"><b>${x.verdictTitle}</a></td>
+            <td>${x.points}</td>
+            <td>${x.lastTest}</td>
+            <td>${x.timeLimitMilliseconds}ms</td>
+            <td>${x.memoryLimitKB}kb</td>
+            <td>${x.programmingLanguageTitle}</td>
+            <td style="text-align:center;">${date.toLocaleString()}</td>
+          `;
+
+          tableBody.appendChild(row);
+        })
+
+      }).catch(error => {
+        console.error('Ошибка загрузки посылок:', error);
+        document.getElementById('submission-rows').innerText = 'Ошибка загрузки посылок.';
+      });
+  }
+
+  async function loadSubmissionsFilter() {
+
+    const problem = encodeURIComponent(document.getElementById("problem").value);
+    const verdict = encodeURIComponent(document.getElementById("verdict").value);
+    const language = encodeURIComponent(document.getElementById("language").value);
+    const user = encodeURIComponent(document.getElementById("user").value);
+
+    fetch(`https://localhost:7003/api/submission/get/filter?problem=${problem}&verdict=${verdict}&language=${language}&user=${user}`)
+      .then(response => response.json())
+      .then(submissions => {
+        const tableBody = document.getElementById("submission-rows");
+        tableBody.innerHTML = "";
+
+        submissions.forEach(x => {
+          const row = document.createElement("tr");
+
+          let pr = x.problemId + "." + x.problemTitle;
+          const date = new Date(x.received);
+          date.setHours(date.getHours() + 6);
+          let Color = "black";
+
+          if (x.verdictTitle === "Accepted") {
+            Color = "green";
+          
+          } else if (x.verdictTitle === "Time Limit" || x.verdictTitle === "Memory Limit" || x.verdictTitle === "Runtime Error" || x.verdictTitle === "Presentation Error" || x.verdictTitle === "Wrong Answer") {
+            Color = "red";
+          } else if (x.verdictTitle === "Compile Error") {
+            Color = "blue";
+          }
+
+          row.innerHTML = `
+            <td style="text-align:center;"><a href="#">${x.id}</a></td>
+            <td><a href="profile.html?id=${x.userId}">${x.userNickName}</a></td>
+            <td><a href="problem.html?id=${x.problemId}">${pr}</a></td>
+            <td style="text-align:center; color:${Color};"><b>${x.verdictTitle}</a></td>
+            <td>${x.points}</td>
+            <td>${x.lastTest}</td>
+            <td>${x.timeLimitMilliseconds}ms</td>
+            <td>${x.memoryLimitKB}kb</td>
+            <td>${x.programmingLanguageTitle}</td>
+            <td style="text-align:center;">${date.toLocaleString()}</td>
+          `;
+
+          tableBody.appendChild(row);
+        })
+
+      }).catch(error => {
+        console.error('Ошибка загрузки посылок:', error);
+        document.getElementById('submission-rows').innerText = 'Ошибка загрузки посылок.';
+      });
+  }
+
+</script>
+
+<script>
+  async function LogoutSystem() {
+    const response = await fetch("https://localhost:7003/api/user/logout", {
+      method: "PUT"
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      alert(data.message);
+      window.location.href = "submission.html";
+    } else {
+      const error = await response.text();
+      alert("Ошибка входа: " + error);
+    }
+  }
+</script>
+
+<script>
+  async function toMyProfile() {
+    const response = await fetch("https://localhost:7003/api/user/isactive");
+
+    if (response.ok) {
+      const data = await response.json();
+      window.location.href = `users/profile.html?id=${data.userId}`
+    } else {
+      const error = await response.text();
+      alert("Ошибка: " + error);
+    }
+  }
+</script>

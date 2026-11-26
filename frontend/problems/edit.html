@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="scripts" href="js/script.js" /> 
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&family=Roboto&display=swap" rel="stylesheet" />
+  <title>Edit Problem</title>
+</head>
+<body>
+  <header class="main-header">
+    <nav class="navbar">
+      <div class="nav-left">
+        <ul class="nav-list">
+          <li><a href="../archieve.html">АРХИВ</a></li>
+          <li><a href="../submissions.html">ПОСЫЛКИ</a></li>
+          <li><a href="../topics.html">ТЕМЫ</a></li>
+          <li><a href="../ranklist.html">РЕЙТИНГ</a></li>
+        </ul>
+      </div>
+      <div class="nav-right">
+        <div id="login-icon"></div>
+      </div>
+    </nav>
+  </header>
+  <br>
+  <div class="container">
+    <div class="left" style="width:30%;">
+      <div id="modalHeader" class="section">Загрузка...</div><br><br>
+      <form style>
+        <label for="taskName">Название задачи:<br></label>
+        <input type="text" id="taskName" name="taskName" style="width:95%;"/><br>
+        <label for="taskTime">Время (в мс):<br></label>
+        <input type="text" id="taskTime" name="taskTime" style="width:95%;"/><br>
+        <label for="taskMemory">Память (в кб):<br></label>
+        <input type="text" id="taskMemory" name="taskMemory" style="width:95%;"/><br>
+        <label for="taskDifficulty">Сложность от(1 до 100):<br></label>
+        <input type="text" id="taskDifficulty" name="taskDifficulty" style="width:95%;"/><br>
+        <button type="submit" onclick="updateProblem()">Изменить</button>
+      </form>
+    </div>
+    <div class="right" style="width:34%;margin-right:0">
+      <div><span class="section">Тесты</span></div>
+      <table class="task-table">
+        <colgroup>
+          <col style="width: 60px;">
+          <col>
+          <col>
+          <col style="width: 60px;">
+          <col style="width: 30px;">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Ввод</th>
+            <th>Вывод</th>
+            <th>Баллы</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="test-rows"></tbody>
+      </table>
+      <br>
+      <form id="test-add-form"></form>
+    </div>
+    <div class="right" style="width:33%;margin-left:0">
+      <div><span class="section">Темы задач</span></div>
+      <table class="task-table">
+        <colgroup>
+          <col style="width: 60px;">
+          <col>
+          <col style="width: 30px;">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Тема</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="topic-rows"></tbody>
+      </table>
+      <br>
+      <form id="topic-add-form"></form>
+    </div>
+  </div>
+</body>
+</html>
+
+<script>
+  function getFromUrl(x) {
+    const params = new URLSearchParams(window.location.search);
+    return params.get(x);
+  }
+</script>
+
+<script>
+  async function loadTopics() {
+    const tableBody = document.getElementById("topic-rows");
+    try {
+      const response = await fetch(`https://localhost:7003/api/problem/gettopics/byproblem${getFromUrl("id")}`);
+      const topics = await response.json();
+      tableBody.innerHTML = "";
+
+      let idx = 1;
+      topics.forEach(topic => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+          <td style="text-align:center;">${idx}</td>
+          <td>${topic.title}</td>
+          <td><a href="#" class="delete-button" title="Удалить" onclick="removeTopic(${topic.id})">🗑️</a></td>  
+        `;
+
+        idx = idx + 1;
+
+        tableBody.appendChild(row);
+      });
+
+      const row = document.createElement("tr");
+      const select = document.createElement("select");
+      select.innerHTML = ``;
+
+    } catch (error) {
+      console.error("Ошибка при загрузки тем:", error);
+      tableBody.innerHTML = "<tr><td colspan='5'>Ошибка загрузки данных</td></tr>";
+    }
+  }
+  async function removeTopic(id) {
+    const confirmed = confirm("Вы уверены, что хотите удалить этот тему с задачи?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://localhost:7003/api/problem/deletetopic${getFromUrl("id")}/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        await loadTopics();
+      } else {
+        alert('Ошибка при удалении:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Ошибка запроса на удаление:', error);
+    }    
+  }
+  async function addTopic(event) {
+    event.preventDefault();
+
+    const topicId = document.getElementById("new-topic").value;
+
+    try {
+        const response = await fetch(`https://localhost:7003/api/problem/addtopic${getFromUrl("id")}/${topicId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify()
+        });
+
+        if (response.ok) {
+            alert("Тема успешно добавлен!");
+            document.getElementById("topic-add-form").reset();
+            
+            await loadTopics();
+        } else {
+            const errorText = await response.text();
+            alert("Ошибка при добавлении темы: " + errorText);
+        }
+    } catch (error) {
+        console.error("Ошибка:", error);
+        alert("Произошла ошибка при отправке запроса.");
+    }
+  }
+
+  async function loadTopicAddForm() {
+
+    const form = document.getElementById("topic-add-form");
+    
+    const resp = await fetch(`https://localhost:7003/api/topic/get`);
+    const tops = await resp.json();
+    const select = document.createElement("select");
+    select.id = "new-topic";
+    tops.forEach(top => {
+      select.innerHTML += `<option value="${top.id}">${top.title}</option>`;
+    });
+
+    select.style="width: 100%;";
+    
+    button = document.createElement("button");
+    button.type = "submit";
+    button.className = "submitTopic";
+    button.innerHTML = `Добавить`;
+
+    form.appendChild(select);
+    form.appendChild(button);
+
+    form.addEventListener("submit", addTopic);
+  }
+
+  window.addEventListener("DOMContentLoaded", loadTopicAddForm);
+  window.addEventListener("DOMContentLoaded", loadTopics);
+</script>
+
+<script>
+  async function loadTests() {
+    const tableBody = document.getElementById("test-rows");
+    try {
+      const response = await fetch(`https://localhost:7003/api/problem/get/tests${getFromUrl("id")}`);
+      const tests = await response.json();
+      tableBody.innerHTML = "";
+
+      let idx = 1;
+      tests.forEach(test => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+          <td style="text-align:center;">${idx}</td>
+          <td>${test.input}</td>
+          <td>${test.output}</td>
+          <td>${test.point}</td>
+          <td><a href="#" class="delete-button" title="Удалить" onclick="removeTest(${test.id})">🗑️</a></td>  
+        `;
+
+        idx = idx + 1;
+        tableBody.appendChild(row);
+      });
+    } catch (error) {
+      console.error("Ошибка при загрузки тестов:", error);
+      tableBody.innerHTML = "<tr><td colspan='5'>Ошибка загрузки данных</td></tr>";
+    }
+  }
+
+  async function removeTest(id) {
+    const confirmed = confirm("Вы уверены, что хотите удалить этот тест?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://localhost:7003/api/test/delete${id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        await loadTests();
+      } else {
+        alert('Ошибка при удалении:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Ошибка запроса на удаление:', error);
+    }    
+  }
+
+  async function addTest(event) {
+    event.preventDefault();
+
+    const input = document.getElementById("input").value;
+    const output = document.getElementById("output").value;
+    const point = document.getElementById("point").value;
+
+    const payload = {
+        input: input,
+        output: output,
+        point: point
+    };
+
+    try {
+        const response = await fetch(`https://localhost:7003/api/problem/addtest${getFromUrl("id")}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            alert("Тест успешно добавлен!");
+
+            document.getElementById("test-add-form").reset();
+            
+            loadTests();
+        } else {
+            const errorText = await response.text();
+            alert("Ошибка при добавлении теста: " + errorText);
+        }
+    } catch (error) {
+        console.error("Ошибка:", error);
+        alert("Произошла ошибка при отправке запроса.");
+    }
+  }
+
+  async function loadTestAddForm() {
+    const form = document.getElementById("test-add-form");
+
+    const input1 = document.createElement("textarea");
+    //input1.type = "text";
+    input1.name = "input";
+    input1.id = "input";
+    input1.style="width:95%;";
+    input1.required = true;
+
+    const input2 = document.createElement("textarea");
+    //input2.type = "textarea";
+    input2.name = "output";
+    input2.id = "output";
+    input2.style="width:95%;";
+    input2.required = true;
+
+    const input3 = document.createElement("textarea");
+    //input3.type = "textarea";
+    input3.name = "point";
+    input3.id = "point";
+    input3.style="width:95%;";
+    input3.required = true;
+
+    const button = document.createElement("button");
+    button.type = "submit";
+    button.textContent = "Добавить";
+
+    const label1 = document.createElement("label");
+    label1.textContent = "Ввод:";
+    label1.htmlFor = "input";
+    const label2 = document.createElement("label");
+    label2.textContent = "Вывод:";
+    label2.htmlFor = "output";
+    const label3 = document.createElement("label");
+    label3.textContent = "Баллы:";
+    label3.htmlFor = "point";
+
+    form.appendChild(label1);
+    form.appendChild(input1);
+    form.appendChild(document.createElement("br"));
+    form.appendChild(label2);
+    form.appendChild(input2);
+    form.appendChild(document.createElement("br"));
+    form.appendChild(label3);
+    form.appendChild(input3);
+    form.appendChild(document.createElement("br"));
+    form.appendChild(button);
+
+    form.addEventListener("submit", addTest);
+  }
+
+  window.addEventListener("DOMContentLoaded", loadTestAddForm);
+  window.addEventListener("DOMContentLoaded", loadTests);
+</script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const id = getFromUrl("id");
+    if (!id) {
+      document.getElementById("modalHeader").textContent = "Задача не выбрана";
+      return;
+    }
+
+    fetch(`https://localhost:7003/api/problem/get${id}`)
+      .then(response => {
+        if (!response.ok) throw new Error("Не удалось загрузить задачу");
+        return response.json();
+      })
+      .then(problem => {
+        const header = document.getElementById("modalHeader");
+        header.innerHTML = `Редактировать задачу<br><span style="color:red;">${problem.id}. ${problem.title}</span>`;
+      })
+      .catch(err => {
+        console.error(err);
+        document.getElementById("modalHeader").textContent = "Ошибка загрузки задачи";
+      });
+  });
+</script>
+
+
+<script>
+  async function updateProblem() {
+    event.preventDefault();
+
+    const title = document.getElementById("taskName").value;
+    const time = document.getElementById("taskTime").value;
+    const memory = document.getElementById("taskMemory").value;
+    const difficulty = document.getElementById("taskDifficulty").value;
+    
+
+    const payload = {};
+    if (title != null && title != "") {
+      payload.title = title;
+    }
+    if (time != null && time != "") {
+      payload.timeLimitMilliseconds = time;
+    }
+    if (memory != null && memory != "") {
+      payload.memoryLimitKB = memory;
+    }
+    if (difficulty != null && difficulty != "") {
+      payload.difficulty = difficulty;
+    }
+
+    const response = await fetch(`https://localhost:7003/api/problem/update${getFromUrl("id")}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+    if (response.ok) {
+      alert("Изменения сохранены");
+      window.location.href = "../archieve.html";
+    } else {
+      alert("Ошибка: " + response.json().message);
+    }
+  }
+</script>
+
+<script>
+  async function LogoutSystem() {
+    const response = await fetch("https://localhost:7003/api/user/logout", {
+      method: "PUT"
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      alert(data.message);
+      window.location.href = "archieve.html";
+    } else {
+      const error = await response.text();
+      alert("Ошибка входа: " + error);
+    }
+  }
+</script>
+
+<script>
+  async function toMyProfile() {
+    const response = await fetch("https://localhost:7003/api/user/isactive");
+
+    if (response.ok) {
+      const data = await response.json();
+      window.location.href = `users/profile.html?id=${data.userId}`
+    } else {
+      const error = await response.text();
+      alert("Ошибка: " + error);
+    }
+  }
+</script>
+
+<script>
+  fetch("https://localhost:7003/api/user/isactive")
+    .then(response => response.json())
+    .then(data => {
+
+        if (data.message === "Active") {
+          document.getElementById("login-icon").innerHTML = `
+            <u><a href="#" class="login-link" onclick="toMyProfile()">${data.userNickName}</span></u> | 
+            <a href="#" class="login-link" onclick="LogoutSystem()">ВЫЙТИ</a>
+          `
+        } else {
+          document.getElementById("login-icon").innerHTML = `
+            <a href="login.html" class="login-link">ВОЙТИ</a>
+          `
+        }
+    });
+</script>

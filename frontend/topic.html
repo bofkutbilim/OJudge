@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="scripts" href="js/script.js" /> 
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&family=Roboto&display=swap" rel="stylesheet" />
+  <title>Topic</title>
+</head>
+<body>
+  <header class="main-header">
+    <nav class="navbar">
+      <div class="nav-left">
+        <ul class="nav-list">
+          <li><a href="archieve.html">АРХИВ</a></li>
+          <li><a href="submissions.html">ПОСЫЛКИ</a></li>
+          <li><a href="topics.html">ТЕМЫ</a></li>
+          <li><a href="ranklist.html">РЕЙТИНГ</a></li>
+        </ul>
+      </div>
+      <div class="nav-right">
+        <div id="login-icon"></div>
+      </div>
+    </nav>
+  </header>
+
+  <br>
+
+  <div class="container">
+    <div class="left_right">
+      <div>
+        <div id="topic-data"></div><br>
+
+        <div class="section">Список Задач</div>
+        <table class="task-table">
+        <colgroup>
+          <col style="width: 90px;">
+          <col style="width: 300px;">
+          <col>
+          <col style="width: 90px;">
+          <col style="width: 90px;">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Название</th>
+            <th>Темы</th>
+            <th>Сложность</th>
+            <th>Кол. Решивших</th>
+          </tr>
+        </thead>
+        <tbody id="task-rows"></tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+
+<script>
+  function getTopicIdFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("id");
+  }
+
+  async function loadTopicData(id) {
+    const write = document.getElementById("topic-data");
+    const response = await fetch(`https://localhost:7003/api/topic/get${id}`);
+    const topicData = await response.json();
+
+    write.innerHTML = `<div class="section">${topicData.title}</div>`;
+    write.innerHTML += `<div class="text"><p>${topicData.description ? topicData.description : ""}</p></div>`;
+  }
+
+  window.addEventListener("DOMContentLoaded", loadTopicData(getTopicIdFromUrl()));
+</script>
+
+<script>
+  async function loadProblems() {
+    const tableBody = document.getElementById("task-rows");
+    try {
+      const response = await fetch(`https://localhost:7003/api/problem/get/bytopic${getTopicIdFromUrl()}`); // Укажи нужный порт
+      const problems = await response.json();
+      tableBody.innerHTML = "";
+
+      problems.forEach(problem => {
+        const row = document.createElement("tr");
+        if (problem.isSolved === true)
+          row.style.backgroundColor = "#CAFFE1";
+        else if (problem.isSubmitted === true)
+          row.style.backgroundColor = "#FFEFDC";
+
+        let Difficulty = "Undefined";
+        let Color = "black";
+
+        if (problem.difficulty != null) {
+          if (problem.difficulty < 33) {
+            Difficulty = "Easy";
+            Color = "green";
+          } else if (problem.difficulty < 66) {
+            Difficulty = "Medium";
+            Color = "orange";
+          } else {
+            Difficulty = "Hard";
+            Color = "Red";
+          }
+        }
+
+        row.innerHTML = `
+          <td style="text-align:center;">${problem.id}</td>
+          <td><a href="problem.html?id=${problem.id}">${problem.title}</a></td>
+          <td style="text-align:right;">${problem.topicShortTitle ? problem.topicShortTitle.join(", ") : ""}</td>
+          <td style="text-align:center;color:${Color}"><b>${Difficulty}</b></td>
+          <td>${problem.solved}</td>
+        `;
+
+        tableBody.appendChild(row);
+      });
+    } catch (error) {
+      console.error("Ошибка при загрузке задач:", error);
+      tableBody.innerHTML = "<tr><td colspan='5'>Ошибка загрузки данных</td></tr>";
+    }
+  }
+
+  // Загружаем после полной отрисовки страницы
+  window.addEventListener("DOMContentLoaded", loadProblems);
+</script>
+
+<script>
+  async function LogoutSystem() {
+    const response = await fetch("https://localhost:7003/api/user/logout", {
+      method: "PUT"
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      alert(data.message);
+      window.location.href = "archieve.html";
+    } else {
+      const error = await response.text();
+      alert("Ошибка входа: " + error);
+    }
+  }
+</script>
+
+<script>
+  async function toMyProfile() {
+    const response = await fetch("https://localhost:7003/api/user/isactive");
+
+    if (response.ok) {
+      const data = await response.json();
+      window.location.href = `users/profile.html?id=${data.userId}`
+    } else {
+      const error = await response.text();
+      alert("Ошибка: " + error);
+    }
+  }
+</script>
+
+<script>
+  fetch("https://localhost:7003/api/user/isactive")
+    .then(response => response.json())
+    .then(data => {
+
+        if (data.message === "Active") {
+          document.getElementById("login-icon").innerHTML = `
+            <u><a href="#" class="login-link" onclick="toMyProfile()">${data.userNickName}</span></u> | 
+            <a href="#" class="login-link" onclick="LogoutSystem()">ВЫЙТИ</a>
+          `
+        } else {
+          document.getElementById("login-icon").innerHTML = `
+            <a href="login.html" class="login-link">ВОЙТИ</a>
+          `
+        }
+    });
+</script>

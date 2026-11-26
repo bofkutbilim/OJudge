@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&family=Roboto&display=swap" rel="stylesheet" />
+  <title>Profile</title>
+  <style>
+    .profile-info img {
+      width: 200px;
+      height: 200px;
+      border-radius: 10%;
+      object-fit: cover;
+      background-color: white;
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+  <header class="main-header">
+    <nav class="navbar">
+      <div class="nav-left">
+        <ul class="nav-list">
+          <li><a href="../archieve.html">АРХИВ</a></li>
+          <li><a href="../submissions.html">ПОСЫЛКИ</a></li>
+          <li><a href="../topics.html">ТЕМЫ</a></li>
+          <li><a href="../ranklist.html">РЕЙТИНГ</a></li>
+        </ul>
+      </div>
+      <div class="nav-right">
+        <div id="login-icon"></div>
+      </div>
+    </nav>
+  </header>
+  
+  <br>
+
+  <div class="container">
+    <div class="left_right" style="margin-left:400px;margin-right:400px;display:flex; align-item:center; gap: 30px;">
+      <style>
+        .profile-info {
+          display: flex;
+          align-items: center;
+          gap: 100px;
+        }
+      </style>
+      <div class="profile-info" id="profile-info"></div>
+    </div>
+  </div>
+</body>
+<script>
+  function getIdFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("id");
+  }
+</script>
+<script>
+  const id = getIdFromUrl();
+  fetch(`https://localhost:7003/api/user/get${id}`)
+    .then(response => response.json())
+    .then(data => {
+
+      const profileImage = document.getElementById("profile-info");
+
+      const image = document.createElement("img");
+      image.src = "../default.webp";
+      image.alt = "Аватар пользователя";
+
+      profileImage.appendChild(image);
+
+      const div = document.createElement("div");
+
+      const roleNick = document.createElement("section");
+      roleNick.innerHTML = `<span class="section" style="color:blue; "><b>${data.role}: ${data.nickName}</b></span>`;
+
+      div.appendChild(roleNick);
+
+      const table = document.createElement("table");
+      table.innerHTML = `
+        <colgroup>
+          <col>
+          <col style="text-align:right;">
+        </colgroup<
+        <tbody>
+          <tr><td> ${data.name} ${data.surName}</td><td></td></tr>
+          <tr><td>из страны:</td><td><a href="../country.html?id=${data.countryId}">${data.countryTitle ? data.countryTitle : ""}</a></td></tr>
+          <tr><td>из организации:</td><td><a href="../organization.html?id=${data.organizationId}">${data.organizationTitle ? data.organizationTitle : ""}</a></td></tr>
+          <tr><td>решено задач:</td><td><a href="#">${data.solved}</a></td></tr>
+          <tr><td>сделано посылок:</td><td><a href="#">${data.submitted}</a></td></tr>
+        </tbody>
+      `;
+
+      div.appendChild(table);
+
+      profileImage.appendChild(div);
+    });
+</script>
+
+</html>
