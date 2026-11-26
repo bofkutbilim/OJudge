@@ -1,5 +1,4 @@
-﻿using Azure.Core;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace OJudge.Services
 {
