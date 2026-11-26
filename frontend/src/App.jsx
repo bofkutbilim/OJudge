@@ -1,122 +1,100 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useEffect, useState } from 'react'
+import { api, useSession } from './api.js'
+import { ResourceState, SessionProvider } from './components.jsx'
+import { routes } from './routes.js'
+import * as accounts from './pages/AccountPages.jsx'
+import * as judge from './pages/JudgePages.jsx'
+import * as topics from './pages/TopicPages.jsx'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+const navigation = [
+  ['archive', '/archieve.html', 'Архив'],
+  ['submissions', '/submissions.html', 'Посылки'],
+  ['topics', '/topics.html', 'Темы'],
+  ['ranklist', '/ranklist.html', 'Рейтинг'],
+]
+
+function NotFoundPage() {
+  return (
+    <section className="panel narrow not-found">
+      <p className="error-code">404</p>
+      <h1>Страница не найдена</h1>
+      <a className="button" href="/archieve.html">В архив задач</a>
+    </section>
+  )
+}
+
+const views = { ...accounts, ...judge, ...topics, NotFoundPage }
+
+function Header({ route }) {
+  const session = useSession()
+  const [busy, setBusy] = useState(false)
+  const [logoutError, setLogoutError] = useState('')
+
+  async function logout() {
+    setBusy(true)
+    setLogoutError('')
+    try {
+      await api('user/logout', { method: 'PUT' })
+      const list = navigation.find(([, href]) => href === route.path)
+      window.location.assign(list ? list[1] : '/archieve.html')
+    } catch (error) {
+      setLogoutError(error.message)
+      setBusy(false)
+      session.reload()
+    }
+  }
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+      <a href="#main" className="skip-link">К содержимому</a>
+      <header className="site-header">
+        <div className="header-inner">
+          <a className="brand" href="/archieve.html" aria-label="OnlineJudge — архив задач">
+            <span className="brand-mark" aria-hidden="true">›_</span>OnlineJudge
+          </a>
+          <nav className="site-nav" aria-label="Основная навигация">
+            {navigation.map(([section, href, label]) => (
+              <a key={section} href={href} aria-current={route.section === section
+                ? route.path === href ? 'page' : 'location'
+                : undefined}>{label}</a>
+            ))}
+          </nav>
+          <div className="session-nav">
+            {session.loading ? <span role="status">Загрузка…</span> : session.user ? (
+              <>
+                <a className="session-profile" href={`/users/profile.html?id=${session.user.userId}`}>
+                  {session.user.userNickName}
+                </a>
+                <button type="button" className="session-button" disabled={busy} onClick={logout}>Выйти</button>
+              </>
+            ) : !session.error && route.view !== 'LoginPage' && (
+              <a className="session-button" href="/login.html">Войти</a>
+            )}
+          </div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
+      </header>
+      {(session.error || logoutError) && (
+        <div className="shell-notice">
+          {session.error && <ResourceState resource={session} />}
+          {logoutError && <p role="alert" className="error">{logoutError}</p>}
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+      )}
     </>
   )
 }
 
-export default App
+export default function App() {
+  const pathname = window.location.pathname
+  const path = pathname === '/' || pathname === '/index.html' ? '/archieve.html' : pathname
+  const route = routes.find(entry => entry.path === path) || routes.find(entry => entry.view === 'NotFoundPage')
+  const Page = views[route.view]
+  useEffect(() => { document.title = `${route.title} · OnlineJudge` }, [route])
+
+  return (
+    <SessionProvider>
+      <Header route={route} />
+      <main id="main" className="workspace" tabIndex="-1"><Page /></main>
+    </SessionProvider>
+  )
+}

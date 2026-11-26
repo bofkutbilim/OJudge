@@ -1,0 +1,21 @@
+// The same addresses are used by React and by Vite's static HTML entries.
+export const routes = [
+  { path: '/archieve.html', view: 'ArchivePage', title: 'Архив задач', section: 'archive' },
+  { path: '/problem.html', view: 'ProblemPage', title: 'Условие задачи', section: 'archive' },
+  { path: '/problems/edit.html', view: 'ProblemEditPage', title: 'Редактирование задачи', section: 'archive' },
+  { path: '/submissions.html', view: 'SubmissionsPage', title: 'Посылки', section: 'submissions' },
+  { path: '/submission.html', view: 'SubmissionPage', title: 'Посылка', section: 'submissions' },
+  { path: '/topics.html', view: 'TopicsPage', title: 'Темы', section: 'topics' },
+  { path: '/topic.html', view: 'TopicPage', title: 'Задачи по теме', section: 'topics' },
+  { path: '/topics/edit.html', view: 'TopicEditPage', title: 'Редактирование подтемы', section: 'topics' },
+  { path: '/maintopics/edit.html', view: 'MainTopicEditPage', title: 'Редактирование темы', section: 'topics' },
+  { path: '/maintopics/addtopic.html', view: 'MainTopicAddPage', title: 'Добавление подтемы', section: 'topics' },
+  { path: '/ranklist.html', view: 'RanklistPage', title: 'Рейтинг участников', section: 'ranklist' },
+  { path: '/users/profile.html', view: 'ProfilePage', title: 'Профиль участника', section: 'ranklist' },
+  { path: '/users/edit.html', view: 'UserEditPage', title: 'Редактирование профиля', section: 'ranklist' },
+  { path: '/country.html', view: 'CountryPage', title: 'Страна', section: 'ranklist' },
+  { path: '/organization.html', view: 'OrganizationPage', title: 'Организация', section: 'ranklist' },
+  { path: '/login.html', view: 'LoginPage', title: 'Вход' },
+  { path: '/signup.html', view: 'SignupPage', title: 'Регистрация' },
+  { path: '/notfound.html', view: 'NotFoundPage', title: 'Страница не найдена' },
+]
