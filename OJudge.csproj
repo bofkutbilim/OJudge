@@ -24,7 +24,7 @@
     <Folder Include="Configurations\" />
     <Folder Include="Middlewares\" />
     <Folder Include="Migrations\" />
-    <Folder Include="frontend\" />
+    <Folder Include="frontend-legacy\" />
   </ItemGroup>
 
 </Project>
