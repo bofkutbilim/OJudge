@@ -4,36 +4,25 @@ namespace OJudge.Services
 {
     public class CppCompilerService
     {
-        public static async Task<string> Compile(string Code) {
-            var codesDir = @"C:\Users\Amin Stors\Documents\AAA Учёба\Мои проекты\OJudge\Codes";
-            
-            try
+        public static async Task<string?> Compile(string code, string exePath)
+        {
+            var cppPath = Path.ChangeExtension(exePath, ".cpp");
+            await File.WriteAllTextAsync(cppPath, code);
+            var compile = new ProcessStartInfo("g++")
             {
-                var cppPath = Path.Combine(codesDir, "program.cpp");
-                var exePath = Path.Combine(codesDir, "program.exe");
-
-                await System.IO.File.WriteAllTextAsync(cppPath, Code);
-
-                var compile = new ProcessStartInfo("g++", $"\"{cppPath}\" -o \"{exePath}\"")
-                {
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                JudgeProcessEnvironment.LimitToToolchain(compile);
-                using var compileProc = Process.Start(compile);
-                var errorOutput = await compileProc.StandardError.ReadToEndAsync();
-                await compileProc.WaitForExitAsync();
-
-                if (compileProc.ExitCode != 0)
-                {
-                    return "error: " + errorOutput;
-                }
-
-                return "ok";
-            } finally {
-            }
+                WorkingDirectory = Path.GetDirectoryName(exePath)!,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            compile.ArgumentList.Add(cppPath);
+            compile.ArgumentList.Add("-o");
+            compile.ArgumentList.Add(exePath);
+            JudgeProcessEnvironment.LimitToToolchain(compile);
+            using var compiler = Process.Start(compile) ?? throw new IOException("Could not start g++.");
+            var errors = await compiler.StandardError.ReadToEndAsync();
+            await compiler.WaitForExitAsync();
+            return compiler.ExitCode == 0 ? null : errors;
         }
     }
 }

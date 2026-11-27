@@ -43,7 +43,7 @@ export function clearSession(token) {
   }
 }
 
-export async function login(credentials) {
+export async function loginAndOpenArchive(credentials) {
   const result = await api('user/login', { method: 'PUT', body: credentials, anonymous: true })
   if (!result?.accessToken || result.tokenType !== 'Bearer' || !Number.isFinite(Date.parse(result.expiresAt))) {
     throw new Error('Сервер не вернул токен входа.')
@@ -53,7 +53,9 @@ export async function login(credentials) {
   } catch {
     throw new Error('Разрешите хранилище вкладки в браузере для входа.')
   }
-  window.dispatchEvent(new Event(sessionEvent))
+  // The new document reads the saved token. Notifying this one would start a
+  // session check just before navigation cancels its HTTP request.
+  window.location.replace('/archieve.html')
 }
 
 export async function logout() {
@@ -138,10 +140,14 @@ export function useResource(path) {
     function finish(data, error) {
       if (!controller.signal.aborted) setResult({ path, revision, token, data, error })
     }
-    api(path, { signal: controller.signal }).then(
-      data => finish(data, null),
-      error => finish(null, error),
-    )
+    // StrictMode can clean up the initial effect and immediately set it up again.
+    queueMicrotask(() => {
+      if (controller.signal.aborted) return
+      api(path, { signal: controller.signal }).then(
+        data => finish(data, null),
+        error => finish(null, error),
+      )
+    })
     return () => controller.abort()
   }, [path, revision, token])
 

@@ -35,6 +35,8 @@ await using (var scope = app.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
+    await DatabaseInitializer.SeedAsync(db, app.Environment, app.Configuration,
+        scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>(), app.Logger);
 }
 
 if (app.Environment.IsDevelopment())

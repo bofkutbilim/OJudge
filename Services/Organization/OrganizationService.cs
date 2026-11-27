@@ -15,5 +15,13 @@ namespace OJudge.Services
         {
             return await _context.Organizations.ToListAsync();
         }
+
+        public async Task<Organization> CreateAsync(OJudge.Dtos.CreateOrganizationDto dto, CancellationToken ct)
+        {
+            var organization = new Organization { Title = dto.Title.Trim(), Description = dto.Description?.Trim() };
+            _context.Organizations.Add(organization);
+            await _context.SaveChangesAsync(ct);
+            return organization;
+        }
     }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, login, pageId, useResource, useSession } from '../api.js'
+import { api, loginAndOpenArchive, pageId, useResource, useSession } from '../api.js'
 import { ResourceState } from '../components.jsx'
 import './account/profile.css'
 
@@ -26,6 +26,7 @@ function AuthenticationForm({ register = false }) {
       try {
         await api('user/create', {
           method: 'POST',
+          anonymous: true,
           body: { ...credentials, email: fields.get('email') },
         })
         setCreated(true)
@@ -37,8 +38,7 @@ function AuthenticationForm({ register = false }) {
     }
 
     try {
-      await login(credentials)
-      window.location.assign('/archieve.html')
+      await loginAndOpenArchive(credentials)
     } catch (err) {
       const message = err.status === 401 ? 'Проверьте никнейм и пароль.' : err.message
       setError(`${register ? 'Аккаунт создан. Войдите в него снова.' : 'Не удалось войти.'} ${message}`)

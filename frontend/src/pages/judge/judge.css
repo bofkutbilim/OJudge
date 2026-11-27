@@ -19,6 +19,16 @@
   margin: 0 0 1.2rem;
 }
 .judge-details:last-child { margin-bottom: 0; }
+.submission-source {
+  overflow: auto;
+  max-height: 70vh;
+  border-radius: 6px;
+  background: #0d1117;
+  color: #e6edf3;
+  tab-size: 4;
+  line-height: 1.55;
+}
+.submission-source > code { display: block; padding: 1rem; white-space: pre; }
 .judge-details dt { color: var(--muted); }
 .judge-details dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
 .judge-topics { display: flex; flex-wrap: wrap; gap: .4rem; list-style: none; margin: 0; padding: 0; }

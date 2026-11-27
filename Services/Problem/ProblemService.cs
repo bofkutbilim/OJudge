@@ -70,7 +70,7 @@ namespace OJudge.Services
                 if (userId.HasValue)
                 {
                     var sub = await _context.Submissions
-                        .FirstOrDefaultAsync(s => s.UserId == userId && s.ProblemId == nx.Id && s.VerdictId == 8);
+                        .FirstOrDefaultAsync(s => s.UserId == userId && s.ProblemId == nx.Id && s.Verdict.Title == Verdict.Accepted);
                     
                     if (sub is not null)
                         nx.IsSubmitted = nx.IsSolved = true;
@@ -119,7 +119,7 @@ namespace OJudge.Services
                 if (userId.HasValue)
                 {
                     var sub = await _context.Submissions
-                        .FirstOrDefaultAsync(s => s.UserId == userId && s.ProblemId == nx.Id && s.VerdictId == 8);
+                        .FirstOrDefaultAsync(s => s.UserId == userId && s.ProblemId == nx.Id && s.Verdict.Title == Verdict.Accepted);
 
                     if (sub is not null)
                         nx.IsSubmitted = nx.IsSolved = true;
@@ -143,7 +143,7 @@ namespace OJudge.Services
                 } else {
 
                     var sub = await _context.Submissions
-                            .FirstOrDefaultAsync(s => s.VerdictId == 8 && s.UserId == userId && s.ProblemId == nx.Id);
+                            .FirstOrDefaultAsync(s => s.Verdict.Title == Verdict.Accepted && s.UserId == userId && s.ProblemId == nx.Id);
                     if (solved == "true" && sub is not null) ret.Add(nx);
                     if (solved == "false" && sub is null) ret.Add(nx);
                     if (solved != "true" && solved != "false") ret.Add(nx);
@@ -339,7 +339,7 @@ namespace OJudge.Services
                 if (userId.HasValue)
                 {
                     var sub = await _context.Submissions
-                        .FirstOrDefaultAsync(s => s.UserId == userId && s.ProblemId == nx.Id && s.VerdictId == 8);
+                        .FirstOrDefaultAsync(s => s.UserId == userId && s.ProblemId == nx.Id && s.Verdict.Title == Verdict.Accepted);
 
                     if (sub is not null)
                         nx.IsSubmitted = nx.IsSolved = true;

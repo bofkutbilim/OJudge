@@ -1,7 +1,17 @@
-import { useState } from 'react'
-import { pageId, useResource } from '../../api.js'
+import { lazy, Suspense, useState } from 'react'
+import { pageId, useResource, useSession } from '../../api.js'
 import { ResourceState } from '../../components.jsx'
 import { LanguageOptions, SubmittedAt, Verdict } from './SubmissionInfo.jsx'
+
+const SubmissionCode = lazy(() => import('./SubmissionCode.jsx'))
+
+function SubmissionAccess({ session }) {
+  return <section className="panel narrow">
+    <h1>Посылки</h1>
+    <ResourceState resource={session} />
+    {!session.loading && !session.error && <p><a href="/login.html">Войдите</a>, чтобы посмотреть посылки.</p>}
+  </section>
+}
 
 function UserLink({ item }) {
   return <a href={`/users/profile.html?id=${item.userId}`}>{item.userNickName}</a>
@@ -34,8 +44,10 @@ function SubmissionTable({ items }) {
 }
 
 export function SubmissionsPage() {
+  const session = useSession()
   const [path, setPath] = useState('submission/get')
-  const submissions = useResource(path)
+  const submissions = useResource(session.user ? path : null)
+  if (!session.user) return <SubmissionAccess session={session} />
 
   function search(event) {
     event.preventDefault()
@@ -48,7 +60,7 @@ export function SubmissionsPage() {
   return (
     <div className="page-grid">
       <section className="panel">
-        <div className="page-heading"><h1>Посылки</h1></div>
+        <div className="page-heading"><h1>{session.isAdmin ? 'Все посылки' : 'Мои посылки'}</h1></div>
         <ResourceState resource={submissions} />
         {submissions.data && <SubmissionTable items={submissions.data} />}
       </section>
@@ -64,7 +76,7 @@ export function SubmissionsPage() {
           <label className="field">Язык
             <select name="language" defaultValue="none"><option value="none">Все языки</option><LanguageOptions /></select>
           </label>
-          <label className="field">Пользователь<input name="user" placeholder="Никнейм" /></label>
+          {session.isAdmin && <label className="field">Пользователь<input name="user" placeholder="Никнейм" /></label>}
           <button type="submit">Найти</button>
         </form>
       </aside>
@@ -73,14 +85,16 @@ export function SubmissionsPage() {
 }
 
 export function SubmissionPage() {
+  const session = useSession()
   const id = pageId()
-  const submissions = useResource(id ? 'submission/get' : null)
-  const item = submissions.data?.find(entry => String(entry.id) === id)
+  const detail = useResource(session.user && id ? `submission/${id}` : null)
+  if (!session.user) return <SubmissionAccess session={session} />
+  const item = detail.data?.summary
   return (
-    <section className="panel narrow">
+    <section className="panel">
       <div className="page-heading"><h1>Посылка{id && ` №${id}`}</h1></div>
-      <ResourceState resource={submissions} />
-      {(!id || (submissions.data && !item)) && <p className="empty">Посылка не найдена.</p>}
+      <ResourceState resource={detail} />
+      {!id && <p className="empty">Посылка не найдена.</p>}
       {item && <dl className="judge-details">
         <dt>Вердикт</dt><dd><Verdict title={item.verdictTitle} /></dd>
         <dt>Пользователь</dt><dd><UserLink item={item} /></dd>
@@ -90,7 +104,13 @@ export function SubmissionPage() {
         <dt>Баллы</dt><dd>{item.points}</dd><dt>Тест</dt><dd>{item.lastTest}</dd>
         <dt>Время</dt><dd>{item.timeLimitMilliseconds} мс</dd><dt>Память</dt><dd>{item.memoryLimitKB} КБ</dd>
       </dl>}
-      <a href="/submissions.html">Все посылки</a>
+      {item && <>
+        <h2>Исходный код</h2>
+        <Suspense fallback={<pre className="submission-source"><code>{detail.data.codeText}</code></pre>}>
+          <SubmissionCode languageTitle={item.programmingLanguageTitle} code={detail.data.codeText} />
+        </Suspense>
+      </>}
+      <a href="/submissions.html">{session.isAdmin ? 'Все посылки' : 'Мои посылки'}</a>
     </section>
   )
 }
