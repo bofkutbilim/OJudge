@@ -194,7 +194,7 @@ namespace OJudge.Controllers
         }
 
 
-        private IQueryable<Submission> VisibleSubmissions()
+        private IQueryable<Submission> SubmissionsWithDetailsAccess()
         {
             var submissions = _context.Submissions.AsNoTracking();
             if (User.IsInRole(AuthRoles.Admin)) return submissions;
@@ -221,15 +221,17 @@ namespace OJudge.Controllers
                     ProgrammingLanguageTitle = s.ProgrammingLanguage.Title,
                     Received = s.Received
                 },
-                CodeText = s.CodeText
+                CodeText = s.CodeText,
+                CompilerError = s.CompilerAnswer
             });
 
+        [AllowAnonymous]
         [HttpGet("get")]
         [HttpGet("get/filter")]
         public Task<List<SubmissionListDto>> GetAllAsync([FromQuery] string? problem, [FromQuery] string? verdict,
             [FromQuery] string? language, [FromQuery] string? user, CancellationToken ct)
         {
-            var query = VisibleSubmissions();
+            var query = _context.Submissions.AsNoTracking();
             if (!string.IsNullOrEmpty(problem)) query = query.Where(s => s.Problem.Title.Contains(problem));
             if (!string.IsNullOrEmpty(user)) query = query.Where(s => s.User.NickName.Contains(user));
             if (!string.IsNullOrEmpty(verdict) && verdict != "none") query = query.Where(s => s.Verdict.Title == verdict);
@@ -241,7 +243,7 @@ namespace OJudge.Controllers
         [HttpGet("{id:int}")]
         public async Task<ActionResult<SubmissionDetailsDto>> GetByIdAsync(int id, CancellationToken ct)
         {
-            var item = await ProjectSubmissions(VisibleSubmissions().Where(s => s.Id == id)).SingleOrDefaultAsync(ct);
+            var item = await ProjectSubmissions(SubmissionsWithDetailsAccess().Where(s => s.Id == id)).SingleOrDefaultAsync(ct);
             if (item is null) return NotFound(new { message = "Посылка не найдена." });
             return Ok(item);
         }
@@ -250,7 +252,7 @@ namespace OJudge.Controllers
         public Task<List<SubmissionListDto>> GetMyAsync(int problemId, CancellationToken ct)
         {
             var userId = User.GetUserId();
-            var query = VisibleSubmissions().Where(s => s.UserId == userId && s.ProblemId == problemId);
+            var query = _context.Submissions.AsNoTracking().Where(s => s.UserId == userId && s.ProblemId == problemId);
             return ProjectSubmissions(query).Select(row => row.Summary).ToListAsync(ct);
         }
     }

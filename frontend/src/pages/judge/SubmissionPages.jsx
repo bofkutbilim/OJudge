@@ -9,7 +9,8 @@ function SubmissionAccess({ session }) {
   return <section className="panel narrow">
     <h1>Посылки</h1>
     <ResourceState resource={session} />
-    {!session.loading && !session.error && <p><a href="/login.html">Войдите</a>, чтобы посмотреть посылки.</p>}
+    {!session.loading && !session.error && <p><a href="/login.html">Войдите</a>, чтобы открыть свою посылку.</p>}
+    <a href="/submissions.html">Все посылки</a>
   </section>
 }
 
@@ -22,6 +23,7 @@ function ProblemLink({ item }) {
 }
 
 function SubmissionTable({ items }) {
+  const { user, isAdmin } = useSession()
   if (!items.length) return <p className="empty">Посылок не найдено.</p>
   return (
     <div className="table-wrap">
@@ -31,7 +33,9 @@ function SubmissionTable({ items }) {
         )}</tr></thead>
         <tbody>{items.map(item =>
           <tr key={item.id}>
-            <td><a href={`/submission.html?id=${item.id}`}>{item.id}</a></td>
+            <td>{isAdmin || (user && user.userId === item.userId)
+              ? <a href={`/submission.html?id=${item.id}`}>{item.id}</a>
+              : item.id}</td>
             <td><UserLink item={item} /></td><td><ProblemLink item={item} /></td>
             <td><Verdict title={item.verdictTitle} /></td><td>{item.points}</td><td>{item.lastTest}</td>
             <td>{item.timeLimitMilliseconds} мс</td><td>{item.memoryLimitKB} КБ</td>
@@ -44,10 +48,8 @@ function SubmissionTable({ items }) {
 }
 
 export function SubmissionsPage() {
-  const session = useSession()
   const [path, setPath] = useState('submission/get')
-  const submissions = useResource(session.user ? path : null)
-  if (!session.user) return <SubmissionAccess session={session} />
+  const submissions = useResource(path)
 
   function search(event) {
     event.preventDefault()
@@ -60,7 +62,7 @@ export function SubmissionsPage() {
   return (
     <div className="page-grid">
       <section className="panel">
-        <div className="page-heading"><h1>{session.isAdmin ? 'Все посылки' : 'Мои посылки'}</h1></div>
+        <div className="page-heading"><h1>Все посылки</h1></div>
         <ResourceState resource={submissions} />
         {submissions.data && <SubmissionTable items={submissions.data} />}
       </section>
@@ -76,7 +78,7 @@ export function SubmissionsPage() {
           <label className="field">Язык
             <select name="language" defaultValue="none"><option value="none">Все языки</option><LanguageOptions /></select>
           </label>
-          {session.isAdmin && <label className="field">Пользователь<input name="user" placeholder="Никнейм" /></label>}
+          <label className="field">Пользователь<input name="user" placeholder="Никнейм" /></label>
           <button type="submit">Найти</button>
         </form>
       </aside>
@@ -109,8 +111,12 @@ export function SubmissionPage() {
         <Suspense fallback={<pre className="submission-source"><code>{detail.data.codeText}</code></pre>}>
           <SubmissionCode languageTitle={item.programmingLanguageTitle} code={detail.data.codeText} />
         </Suspense>
+        <h2>Сообщение компилятора</h2>
+        {detail.data.compilerError
+          ? <pre className="submission-source"><code>{detail.data.compilerError}</code></pre>
+          : <p>Сообщений нет.</p>}
       </>}
-      <a href="/submissions.html">{session.isAdmin ? 'Все посылки' : 'Мои посылки'}</a>
+      <a href="/submissions.html">Все посылки</a>
     </section>
   )
 }
