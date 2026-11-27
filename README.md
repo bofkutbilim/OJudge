@@ -57,16 +57,14 @@ RETURNING "Id", "NickName";
 Под администратором можно создать задачу в архиве, добавить тесты в редакторе задачи, создать тему и подтему на странице тем. Для создания организации в Swagger используйте `POST /api/organization/create` с телом `{"title":"Тестовая организация","description":"Для проверки"}`. Успех возвращает `201`, запрос с токеном обычного пользователя — `403`. Список организаций доступен через `GET /api/organization/get`.
 
 ## Swagger
-![изображение](https://github.com/user-attachments/assets/a5c21fd5-7255-406e-b53a-b50ba90bf501)
-![изображение](https://github.com/user-attachments/assets/82a41e90-ffd0-48bd-a48c-b8ad043068f9)
-![изображение](https://github.com/user-attachments/assets/4fc7fb3f-fdee-4cde-9a1e-71175d95ccce)
-![изображение](https://github.com/user-attachments/assets/7dec9985-f1ef-486f-accb-c6d9ca27710d)
-![изображение](https://github.com/user-attachments/assets/c1da4560-003b-4765-8bd4-2f4af73f02cf)
-![изображение](https://github.com/user-attachments/assets/4b316ec2-0f3b-4e6a-a9f2-4575b7dc9763)
-![изображение](https://github.com/user-attachments/assets/b0498e7b-206c-477f-8228-3dd595848fc3)
-![изображение](https://github.com/user-attachments/assets/015d3ff3-433f-4099-9fcd-1dd6f65aca9d)
-![изображение](https://github.com/user-attachments/assets/62f9fe10-9107-4b7d-9de8-a4c6d07df44f)
-![изображение](https://github.com/user-attachments/assets/bdd5dd3d-e8cc-4153-982c-13d4e16b9869)
-![изображение](https://github.com/user-attachments/assets/7b32a999-6dc2-40c6-b01a-431f6c40b7fb)
-![изображение](https://github.com/user-attachments/assets/9498f6ad-7637-4d18-a590-f0877214cf8c)
+<img width="2555" height="1244" alt="image" src="https://github.com/user-attachments/assets/57e95835-f77c-400e-a74e-c537a9a67858" />
+<img width="2556" height="1243" alt="image" src="https://github.com/user-attachments/assets/eb3a7136-e1b5-47cf-a9f8-c53c45e218c6" />
+<img width="2558" height="1243" alt="image" src="https://github.com/user-attachments/assets/4474117f-d4f6-426d-97d6-67ea204b0ec3" />
+<img width="2545" height="1213" alt="image" src="https://github.com/user-attachments/assets/e4c2c1e0-441e-4479-bf34-e64138dc9747" />
+<img width="2557" height="1248" alt="image" src="https://github.com/user-attachments/assets/034b7d40-1729-4888-ba91-3b7901326b23" />
+<img width="2557" height="1241" alt="image" src="https://github.com/user-attachments/assets/81f1a1c9-edfe-483c-b764-c759e471314d" />
+<img width="2557" height="1219" alt="image" src="https://github.com/user-attachments/assets/34b369a9-96e2-437e-9e70-71cb8dab42ac" />
+<img width="2538" height="1230" alt="image" src="https://github.com/user-attachments/assets/f004fa86-3fa0-4bff-a0c9-efda4adb1dff" />
+<img width="2543" height="1231" alt="image" src="https://github.com/user-attachments/assets/49f0ded3-a091-4dc9-92b1-6d9a96d588bf" />
+<img width="2533" height="1237" alt="image" src="https://github.com/user-attachments/assets/8ab8c45a-edaa-4a8e-990c-592425f6ffe5" />
 
