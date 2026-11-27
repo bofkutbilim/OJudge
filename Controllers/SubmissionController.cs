@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OJudge.Data;
 using OJudge.Dtos;
@@ -20,6 +21,7 @@ namespace OJudge.Controllers
             _context = context;
         }
 
+        [Authorize]
         [HttpPost("submit{problemId}")]
         public async Task<IActionResult> CreateSubmissionAsync(int problemId, CreateSubmissionDto dto)
         {
@@ -30,133 +32,127 @@ namespace OJudge.Controllers
             var problem = await _context.Problems.FindAsync(problemId);
             if (problem is null) return NotFound(new { message = "Такая задача не существует!" });
 
-            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-            var token = await _context.Tokens.Include(t => t.User).ThenInclude(u => u.Role).FirstOrDefaultAsync(t => t.IpAddress == ip && t.IsActive == true);
-            if (token is not null && token.IsActive == true)
+            if (User.GetUserId() is not int userId) return Unauthorized();
+            var user = await _context.Users.FindAsync(userId);
+            if (user is null) return Unauthorized();
+
+            var programmingLanguage = await _context.ProgrammingLanguages.FirstOrDefaultAsync(pl => pl.Title == dto.ProgrammingLanguageTitle);
+            if (programmingLanguage is null) return NotFound(new { message = "Такого языка программирования не существует!" });
+
+            string code = string.Empty;
+            using (var reader = new StreamReader(dto.File.OpenReadStream(), Encoding.UTF8))
             {
-                var user = token.User;
-                if (user is null) return NotFound(new { message = "Войдите в систему!" });
+                code = reader.ReadToEnd();
+            }
 
-                var programmingLanguage = await _context.ProgrammingLanguages.FirstOrDefaultAsync(pl => pl.Title == dto.ProgrammingLanguageTitle);
-                if (programmingLanguage is null) return NotFound(new { message = "Такого языка программирования не существует!" });
+            var submission = new Submission
+            {
+                UserId = user.Id,
+                User = user,
+                ProblemId = problem.Id,
+                Problem = problem,
+                ProgrammingLanguageId = programmingLanguage.Id,
+                ProgrammingLanguage = programmingLanguage,
+                VerdictId = 1,
+                Verdict = _context.Verdicts.Find(3),
+                CodeText = code
+            };
+            await _context.Submissions.AddAsync(submission);
+            user.Submitted++;
+            problem.Submitted++;
+            await _context.SaveChangesAsync();
 
-                string code = string.Empty;
-                using (var reader = new StreamReader(dto.File.OpenReadStream(), Encoding.UTF8))
+            string compilerAnswer = (programmingLanguage.Title.Contains("C++") ? await CppCompilerService.Compile(code) : "no cpp");
+
+            if (compilerAnswer == "no cpp")
+            {
+                submission.Verdict = _context.Verdicts.Find(13);
+            }
+            if (compilerAnswer == "ok")
+            {
+                submission.Verdict = _context.Verdicts.Find(6);
+            }
+            else
+            {
+                submission.CompilerAnswer = compilerAnswer;
+                submission.Verdict = _context.Verdicts.Find(4);
+            }
+            await _context.SaveChangesAsync();
+
+            if (compilerAnswer == "ok")
+            {
+                var tests = await _context.Tests
+                    .Where(t => t.ProblemId == problemId)
+                    .ToListAsync();
+
+                int totalPoints = 0;
+                bool wrongAnswer = false;
+                string exePath = @"C:\\Users\\Amin Stors\\Documents\\AAA Учёба\\Мои проекты\\OJudge\\Codes\\program.exe";
+
+                int idx = 1;
+                foreach (var test in tests)
                 {
-                    code = reader.ReadToEnd();
-                }
-
-                var submission = new Submission
-                {
-                    UserId = user.Id,
-                    User = user,
-                    ProblemId = problem.Id,
-                    Problem = problem,
-                    ProgrammingLanguageId = programmingLanguage.Id,
-                    ProgrammingLanguage = programmingLanguage,
-                    VerdictId = 1,
-                    Verdict = _context.Verdicts.Find(3),
-                    CodeText = code
-                };
-                await _context.Submissions.AddAsync(submission);
-                user.Submitted++;
-                problem.Submitted++;
-                await _context.SaveChangesAsync();
-
-                string compilerAnswer = (programmingLanguage.Title.Contains("C++") ? await CppCompilerService.Compile(code) : "no cpp");
-
-                if (compilerAnswer == "no cpp")
-                {
-                    submission.Verdict = _context.Verdicts.Find(13);
-                }
-                if (compilerAnswer == "ok")
-                {
-                    submission.Verdict = _context.Verdicts.Find(6);
-                }
-                else
-                {
-                    submission.CompilerAnswer = compilerAnswer;
-                    submission.Verdict = _context.Verdicts.Find(4);
-                }
-                await _context.SaveChangesAsync();
-
-                if (compilerAnswer == "ok")
-                {
-                    var tests = await _context.Tests
-                        .Where(t => t.ProblemId == problemId)
-                        .ToListAsync();
-
-                    int totalPoints = 0;
-                    bool wrongAnswer = false;
-                    string exePath = @"C:\\Users\\Amin Stors\\Documents\\AAA Учёба\\Мои проекты\\OJudge\\Codes\\program.exe";
-
-                    int idx = 1;
-                    foreach (var test in tests)
+                    var startInfo = new ProcessStartInfo(exePath) // путь к program.exe
                     {
-                        var startInfo = new ProcessStartInfo(exePath) // путь к program.exe
-                        {
-                            RedirectStandardInput = true,
-                            RedirectStandardOutput = true,
-                            UseShellExecute = false,
-                            CreateNoWindow = true
-                        };
+                        RedirectStandardInput = true,
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
 
-                        using var process = Process.Start(startInfo);
+                    JudgeProcessEnvironment.LimitToToolchain(startInfo);
+                    using var process = Process.Start(startInfo);
 
-                        // Передаём input программе
-                        await process.StandardInput.WriteAsync(test.Input);
-                        process.StandardInput.Close(); // обязательно, чтобы программа знала, что ввод завершён
+                    // Передаём input программе
+                    await process.StandardInput.WriteAsync(test.Input);
+                    process.StandardInput.Close(); // обязательно, чтобы программа знала, что ввод завершён
 
-                        // Читаем вывод программы
-                        string result = await process.StandardOutput.ReadToEndAsync();
-                        await process.WaitForExitAsync();
+                    // Читаем вывод программы
+                    string result = await process.StandardOutput.ReadToEndAsync();
+                    await process.WaitForExitAsync();
 
-                        // Сравниваем результат
-                        var expected = test.Output.Trim();
-                        var actual = result.Trim();
+                    // Сравниваем результат
+                    var expected = test.Output.Trim();
+                    var actual = result.Trim();
 
-                        if (expected == actual)
-                        {
-                            if (test.Point is not null)
-                                totalPoints += (int)test.Point;
-                        }
-                        else
-                        {
-                            submission.LastTest = idx;
-                            submission.Points += totalPoints;
-                            wrongAnswer = true;
-                            break;
-                        }
-
-                        idx++;
-                        // Можешь добавить лог или вернуть результаты по каждому тесту
-                    }
-
-                    if (wrongAnswer == true)
+                    if (expected == actual)
                     {
-                        submission.Verdict = _context.Verdicts.Find(7);
+                        if (test.Point is not null)
+                            totalPoints += (int)test.Point;
                     }
                     else
                     {
-                        submission.Points = totalPoints;
-                        submission.LastTest = tests.Count;
-                        if (await _context.Submissions
-                            .FirstOrDefaultAsync(s => s.ProblemId == problem.Id && s.UserId == user.Id && s.VerdictId == 8) is null)
-                        {
-                            user.Solved++;
-                            problem.Solved++;
-                        }
-                        submission.Verdict = _context.Verdicts.Find(8);
+                        submission.LastTest = idx;
+                        submission.Points += totalPoints;
+                        wrongAnswer = true;
+                        break;
                     }
 
-                    await _context.SaveChangesAsync();
+                    idx++;
+                    // Можешь добавить лог или вернуть результаты по каждому тесту
                 }
 
-                return Ok(new { id = submission.Id, message = "Отправлена успешно!" });
+                if (wrongAnswer == true)
+                {
+                    submission.Verdict = _context.Verdicts.Find(7);
+                }
+                else
+                {
+                    submission.Points = totalPoints;
+                    submission.LastTest = tests.Count;
+                    if (await _context.Submissions
+                        .FirstOrDefaultAsync(s => s.ProblemId == problem.Id && s.UserId == user.Id && s.VerdictId == 8) is null)
+                    {
+                        user.Solved++;
+                        problem.Solved++;
+                    }
+                    submission.Verdict = _context.Verdicts.Find(8);
+                }
+
+                await _context.SaveChangesAsync();
             }
 
-            return BadRequest(new { message = "Войдите в систему!" });
-
+            return Ok(new { id = submission.Id, message = "Отправлена успешно!" });
         }
 
 
@@ -241,50 +237,33 @@ namespace OJudge.Controllers
             return ans;
         }
 
+        [Authorize]
         [HttpGet("getmy{problemId}")]
-        public async Task<IEnumerable<SubmissionListDto>> GetMyAsync(int problemId)
+        public async Task<ActionResult<IEnumerable<SubmissionListDto>>> GetMyAsync(int problemId)
         {
-            var ans = new List<SubmissionListDto>();
-            
-            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-            var token = await _context.Tokens.Include(t => t.User).ThenInclude(u => u.Role).FirstOrDefaultAsync(t => t.IpAddress == ip && t.IsActive == true);
+            if (User.GetUserId() is not int userId) return Unauthorized();
 
-            if (token is not null && token.IsActive == true)
-            {
-                var submissions = await _context.Submissions
-                    .Include(s => s.Problem)
-                    .Include(s => s.ProgrammingLanguage)
-                    .Include(s => s.User)
-                    .Include(s => s.Verdict)
-                    .ToListAsync();
-
-                foreach (var x in submissions)
+            var submissions = await _context.Submissions
+                .Where(s => s.UserId == userId && s.ProblemId == problemId)
+                .OrderByDescending(s => s.Id)
+                .Select(s => new SubmissionListDto
                 {
+                    Id = s.Id,
+                    UserId = s.UserId,
+                    UserNickName = s.User.NickName,
+                    ProblemId = s.ProblemId,
+                    ProblemTitle = s.Problem.Title,
+                    VerdictTitle = s.Verdict.Title,
+                    Points = s.Points,
+                    LastTest = s.LastTest,
+                    TimeLimitMilliseconds = s.TimeLimitMilliseconds,
+                    MemoryLimitKB = s.MemoryLimitKB,
+                    ProgrammingLanguageTitle = s.ProgrammingLanguage.Title,
+                    Received = s.Received
+                })
+                .ToListAsync();
 
-                    if (x.UserId != token.UserId || x.ProblemId != problemId) continue;
-
-                    var nx = new SubmissionListDto
-                    {
-                        Id = x.Id,
-                        UserId = x.User.Id,
-                        UserNickName = x.User.NickName,
-                        ProblemId = x.Problem.Id,
-                        ProblemTitle = x.Problem.Title,
-                        VerdictTitle = x.Verdict.Title,
-                        Points = x.Points,
-                        LastTest = x.LastTest,
-                        TimeLimitMilliseconds = x.TimeLimitMilliseconds,
-                        MemoryLimitKB = x.MemoryLimitKB,
-                        ProgrammingLanguageTitle = x.ProgrammingLanguage.Title,
-                        Received = x.Received
-                    };
-                    ans.Add(nx);
-                }
-
-                ans.Reverse();
-            }
-
-            return ans;
+            return Ok(submissions);
         }
     }
 }

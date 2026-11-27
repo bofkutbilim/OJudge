@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
-import { api, pageId, useResource, useSession } from '../api.js'
+import { api, login, pageId, useResource, useSession } from '../api.js'
 import { ResourceState } from '../components.jsx'
 import './account/profile.css'
 
 function AuthenticationForm({ register = false }) {
-  const { user, loading } = useSession()
+  const { user, loading, error: sessionError } = useSession()
   const [busy, setBusy] = useState(false)
   const [created, setCreated] = useState(false)
   const [error, setError] = useState('')
+  const disabled = busy || created || loading || Boolean(user || sessionError)
 
   useEffect(() => {
     if (user) window.location.replace('/archieve.html')
@@ -15,7 +16,7 @@ function AuthenticationForm({ register = false }) {
 
   async function submit(event) {
     event.preventDefault()
-    if (busy || created || loading || user) return
+    if (disabled) return
     const fields = new FormData(event.currentTarget)
     const credentials = { nickName: fields.get('nickName'), password: fields.get('password') }
     setBusy(true)
@@ -36,10 +37,10 @@ function AuthenticationForm({ register = false }) {
     }
 
     try {
-      await api('user/login', { method: 'PUT', body: credentials })
+      await login(credentials)
       window.location.assign('/archieve.html')
     } catch (err) {
-      const message = err.status === 404 ? 'Проверьте никнейм и пароль.' : err.message
+      const message = err.status === 401 ? 'Проверьте никнейм и пароль.' : err.message
       setError(`${register ? 'Аккаунт создан. Войдите в него снова.' : 'Не удалось войти.'} ${message}`)
       setBusy(false)
     }
@@ -65,7 +66,7 @@ function AuthenticationForm({ register = false }) {
         </label>
         {error && <p className="error" role="alert">{error}</p>}
         <div className="actions">
-          <button type="submit" disabled={busy || created || loading || Boolean(user)}>
+          <button type="submit" disabled={disabled}>
             {register ? 'Зарегистрироваться' : 'Войти'}
           </button>
           <a className="button secondary" href={register ? '/login.html' : '/signup.html'}>
@@ -91,6 +92,7 @@ function AffiliationLink({ kind, id, title }) {
 }
 
 export function RanklistPage() {
+  const { user: viewer, isAdmin } = useSession()
   const ranking = useResource('user/get')
   return (
     <section className="panel">
@@ -107,7 +109,7 @@ export function RanklistPage() {
                 <th scope="col">Организация</th>
                 <th scope="col">Решено задач</th>
                 <th scope="col">Отправки</th>
-                <th scope="col"><span className="account-sr-only">Редактирование</span></th>
+                {viewer && <th scope="col"><span className="account-sr-only">Редактирование</span></th>}
               </tr>
             </thead>
             <tbody>
@@ -119,14 +121,14 @@ export function RanklistPage() {
                   <td><AffiliationLink kind="organization" id={user.organizationId} title={user.organization} /></td>
                   <td>{user.solved}</td>
                   <td>{user.submitted}</td>
-                  <td>
-                    <a href={`/users/edit.html?id=${user.id}`} aria-label={`Редактировать профиль ${user.nickName}`}>
+                  {viewer && <td>
+                    {(isAdmin || viewer.userId === user.id) && <a href={`/users/edit.html?id=${user.id}`} aria-label={`Редактировать профиль ${user.nickName}`}>
                       Изменить
-                    </a>
-                  </td>
+                    </a>}
+                  </td>}
                 </tr>
               ))}
-              {ranking.data.length === 0 && <tr><td className="empty" colSpan={7}>Пока нет участников.</td></tr>}
+              {ranking.data.length === 0 && <tr><td className="empty" colSpan={viewer ? 7 : 6}>Пока нет участников.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -160,6 +162,7 @@ export function OrganizationPage() {
 
 export function ProfilePage() {
   const id = pageId()
+  const { user: viewer, isAdmin } = useSession()
   const profile = useResource(id ? `user/get${id}` : null)
   const user = profile.data
   const fullName = user && [user.name, user.surName].filter(Boolean).join(' ')
@@ -183,7 +186,9 @@ export function ProfilePage() {
               <dt>Решено задач</dt><dd>{user.solved}</dd>
               <dt>Посылки</dt><dd>{user.submitted}</dd>
             </dl>
-            <a className="button secondary" href={`/users/edit.html?id=${user.id}`}>Редактировать профиль</a>
+            {(isAdmin || viewer?.userId === user.id) && (
+              <a className="button secondary" href={`/users/edit.html?id=${user.id}`}>Редактировать профиль</a>
+            )}
           </div>
         </div>
       )}

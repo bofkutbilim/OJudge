@@ -1,10 +1,9 @@
-﻿namespace OJudge.Dtos
+﻿namespace OJudge.Dtos;
+
+public sealed class UserActiveDto
 {
-    public class UserActiveDto
-    {
-        public string message { get; set; }
-        public int? userId { get; set; }
-        public string userRole { get; set; }
-        public string userNickName { get; set; }
-    }
+    public string Message { get; init; } = "Active";
+    public required int UserId { get; init; }
+    public required string UserRole { get; init; }
+    public required string UserNickName { get; init; }
 }

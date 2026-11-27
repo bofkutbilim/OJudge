@@ -52,6 +52,7 @@ function RecentSubmissions({ id }) {
 }
 
 export function ProblemPage() {
+  const { user, isAdmin } = useSession()
   const id = pageId()
   const problem = useResource(id ? `problem/get${id}` : null)
   const [adding, setAdding] = useState(false)
@@ -73,7 +74,7 @@ export function ProblemPage() {
           {section.sectionName && <h2>{section.sectionName}</h2>}
           <StatementText text={section.sectionText} />
         </section>)}
-        <button type="button" className="secondary" onClick={() => setAdding(true)}>+ Добавить секцию</button>
+        {isAdmin && <button type="button" className="secondary" onClick={() => setAdding(true)}>+ Добавить секцию</button>}
       </article>
       <aside className="stack">
         <section className="panel">
@@ -88,9 +89,9 @@ export function ProblemPage() {
           </>}
         </section>
         <SendSolution id={id} />
-        <RecentSubmissions id={id} />
+        {user && <RecentSubmissions key={user.userId} id={id} />}
       </aside>
-      {adding && (
+      {isAdmin && adding && (
         <ActionForm dialogTitle="Добавить секцию" onClose={() => setAdding(false)} onSave={addSection} label="Добавить">
           <label className="field">Название секции<input name="sectionName" required /></label>
           <label className="field">Текст секции<textarea name="sectionText" rows="6" required /></label>

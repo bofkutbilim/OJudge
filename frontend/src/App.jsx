@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { api, useSession } from './api.js'
-import { ResourceState, SessionProvider } from './components.jsx'
+import { logout as endSession, pageId, useSession } from './api.js'
+import { EditorAccess, ResourceState, SessionProvider } from './components.jsx'
 import { routes } from './routes.js'
 import * as accounts from './pages/AccountPages.jsx'
 import * as judge from './pages/JudgePages.jsx'
@@ -35,7 +35,7 @@ function Header({ route }) {
     setBusy(true)
     setLogoutError('')
     try {
-      await api('user/logout', { method: 'PUT' })
+      await endSession()
       const list = navigation.find(([, href]) => href === route.path)
       window.location.assign(list ? list[1] : '/archieve.html')
     } catch (error) {
@@ -94,7 +94,11 @@ export default function App() {
   return (
     <SessionProvider>
       <Header route={route} />
-      <main id="main" className="workspace" tabIndex="-1"><Page /></main>
+      <main id="main" className="workspace" tabIndex="-1">
+        {route.editAccess
+          ? <EditorAccess ownerId={route.editAccess === 'owner' ? pageId() : null}><Page /></EditorAccess>
+          : <Page />}
+      </main>
     </SessionProvider>
   )
 }

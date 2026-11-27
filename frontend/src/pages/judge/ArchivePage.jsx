@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { api, useResource } from '../../api.js'
+import { api, useResource, useSession } from '../../api.js'
 import { ResourceState } from '../../components.jsx'
 import { ActionForm } from '../../forms.jsx'
 import { ProblemTable } from './ProblemTable.jsx'
@@ -56,6 +56,7 @@ function TopSolvers() {
 }
 
 export function ArchivePage() {
+  const { isAdmin } = useSession()
   const [path, setPath] = useState('problem/get')
   const [adding, setAdding] = useState(false)
   const problems = useResource(path)
@@ -80,13 +81,14 @@ export function ArchivePage() {
     <div className="page-grid">
       <section className="panel">
         <div className="page-heading">
-          <h1>Архив задач</h1><button type="button" className="secondary" onClick={() => setAdding(true)}>+ Добавить задачу</button>
+          <h1>Архив задач</h1>
+          {isAdmin && <button type="button" className="secondary" onClick={() => setAdding(true)}>+ Добавить задачу</button>}
         </div>
         <ResourceState resource={problems} />
-        {problems.data && <ProblemTable problems={problems.data} onRemove={removeProblem} />}
+        {problems.data && <ProblemTable problems={problems.data} onRemove={isAdmin ? removeProblem : undefined} />}
       </section>
       <aside className="stack"><ArchiveFilter onSearch={search} /><TopSolvers /></aside>
-      {adding && (
+      {isAdmin && adding && (
         <ActionForm dialogTitle="Добавить задачу" onClose={() => setAdding(false)} onSave={addProblem} label="Добавить">
           <label className="field">Название задачи<input name="title" maxLength="50" required /></label>
         </ActionForm>

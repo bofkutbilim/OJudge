@@ -1,92 +1,87 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using OJudge.Data;
-using OJudge.Models;
 using OJudge.Dtos;
-using Microsoft.EntityFrameworkCore.Infrastructure.Internal;
+using OJudge.Models;
 using OJudge.Services;
 
-namespace OJudge.Controllers
+namespace OJudge.Controllers;
+
+[ApiController]
+[Route("api/user")]
+public class UsersController(IUserService userService, JwtSessionService sessions) : ControllerBase
 {
-    [ApiController]
-    [Route("api/user")]
-    public class UsersController : ControllerBase
+    [HttpGet("get")]
+    public async Task<ActionResult<IEnumerable<UserRanklistDto>>> GetAllUsers()
     {
-        private readonly IUserService _userService;
+        return Ok(await userService.GetAllAsync());
+    }
 
-        public UsersController(IUserService userService)
-        {
-            _userService = userService;
-        }
+    [HttpGet("gettop")]
+    public async Task<ActionResult<IEnumerable<UserRanklistDto>>> GetTopUsers()
+    {
+        return Ok(await userService.GetAllAsync());
+    }
 
-        [HttpGet("get")]
-        public async Task<ActionResult<IEnumerable<UserRanklistDto>>> GetAllUsers()
-        {
-            return Ok(await _userService.GetAllAsync());
-        }
+    [HttpGet("get{id}")]
+    public async Task<ActionResult<UserProfileDto>> GetUserById(int id)
+    {
+        var user = await userService.GetByIdAsync(id);
+        return user is null ? NotFound() : Ok(user);
+    }
 
-        [HttpGet("gettop")]
-        public async Task<ActionResult<IEnumerable<UserRanklistDto>>> GetTopUsers()
-        {
-            return Ok(await _userService.GetAllAsync());
-        }
+    [AllowAnonymous]
+    [HttpPost("create")]
+    public async Task<ActionResult<UserProfileDto>> CreateUser(CreateUserDto dto, CancellationToken ct)
+    {
+        var profile = await userService.CreateAsync(dto, ct);
+        if (profile is null) return Conflict(new { message = "Этот никнейм уже занят." });
+        return CreatedAtAction(nameof(GetUserById), new { id = profile.Id }, profile);
+    }
 
-        [HttpGet("get{id}")]
-        public async Task<ActionResult<UserProfileDto>> GetUserById(int id)
-        {
-            var user = await _userService.GetByIdAsync(id);
-            return user is null ? NotFound() : Ok(user);
-        }
+    [Authorize]
+    [HttpPut("update{id}")]
+    public async Task<ActionResult<UserProfileDto>> UpdateUser(int id, UpdateUserDto dto, CancellationToken ct)
+    {
+        if (User.GetUserId() != id && !User.IsInRole(AuthRoles.Admin)) return Forbid();
 
-        [HttpPost("create")]
-        public async Task<ActionResult<User?>> CreateUser(CreateUserDto dto)
-        {
-            if (dto is null)
-                return BadRequest();
+        var profile = await userService.UpdateAsync(id, dto, ct);
+        return profile is null ? NotFound() : Ok(profile);
+    }
 
-            var created = await _userService.CreateAsync(dto);
-            return created is null ? BadRequest() : Ok(created);
-        }
+    [Authorize(Roles = AuthRoles.Admin)]
+    [HttpDelete("delete")]
+    public async Task<IActionResult> DeleteUser([FromQuery] int id, CancellationToken ct)
+    {
+        return await userService.DeleteAsync(id, ct) ? NoContent() : NotFound();
+    }
 
-        [HttpPut("update{id}")]
-        public async Task<ActionResult<User?>> UpdateUser(int id, UpdateUserDto dto)
-        {
-            if (dto is null) return BadRequest();
-            var updated = await _userService.UpdateAsync(id, dto);
-            return updated is null ? NotFound() : Ok(updated);
-        }
+    [AllowAnonymous]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    [HttpPut("login")]
+    public async Task<ActionResult<TokenDto>> Login(LoginDataDto dto, CancellationToken ct)
+    {
+        var user = await userService.AuthenticateAsync(dto, ct);
+        if (user is null) return Unauthorized(new { message = "Неверный никнейм или пароль." });
+        return Ok(await sessions.IssueAsync(user, ct));
+    }
 
-        [HttpDelete("delete")]
-        public async Task<ActionResult<User?>> DeleteUser(int id)
-        {
-            var deleted = await _userService.DeleteAsync(id);
-            return deleted is null ? NotFound() : Ok(deleted);
-        }
+    [Authorize]
+    [HttpPut("logout")]
+    public async Task<IActionResult> Logout(CancellationToken ct)
+    {
+        await sessions.RevokeAsync(User, ct);
+        return NoContent();
+    }
 
-        [HttpPut("login")]
-        public async Task<ActionResult<User?>> LoginAsync(LoginDataDto dto)
-        {
-            if (dto is null)
-                return BadRequest();
-            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-            var user = await _userService.LoginAsync(dto, ip);
-            return user is null ? NotFound() : Ok(new { message = "Успешный вход!" });
-        }
+    [Authorize]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    [HttpGet("isactive")]
+    public ActionResult<UserActiveDto> IsActive()
+    {
+        if (User.GetUserId() is not int id || User.Identity?.Name is not string nickname ||
+            User.FindFirst("role")?.Value is not string role)
+            return Unauthorized();
 
-        [HttpPut("logout")]
-        public async Task<ActionResult<User?>> LogoutAsync()
-        {
-            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-            var user = await _userService.LogoutAsync(ip);
-            return user is null ? BadRequest() : Ok(new { message = "Успешный выход!" });
-        }
-
-        [HttpGet("isactive")]
-        public async Task<ActionResult<UserActiveDto?>> IsActiveAsync() {
-            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-            var user = await _userService.CheckActiveAsync(ip);
-            return user is null ? BadRequest(new { message = "Not Active" }) : Ok(user);
-        }
+        return Ok(new UserActiveDto { UserId = id, UserNickName = nickname, UserRole = role });
     }
 }

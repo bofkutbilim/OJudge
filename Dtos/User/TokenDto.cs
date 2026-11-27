@@ -1,9 +1,8 @@
-﻿namespace OJudge.Dtos
+﻿namespace OJudge.Dtos;
+
+public sealed class TokenDto
 {
-    public class TokenDto
-    {
-        public string NickName { get; set; } = null!;
-        public string IpAddres { get; set; } = null!;
-        public string Token { get; set; } = null!;
-    }
+    public required string AccessToken { get; init; }
+    public required DateTime ExpiresAt { get; init; }
+    public string TokenType { get; init; } = "Bearer";
 }

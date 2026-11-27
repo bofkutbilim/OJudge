@@ -1,4 +1,4 @@
-﻿using OJudge.Data;
+using OJudge.Data;
 using OJudge.Dtos;
 using OJudge.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -50,11 +50,8 @@ namespace OJudge.Services
 
             return ret;
         }
-        public async Task<IEnumerable<ProblemShortDto>> GetAllAsync(string? ip)
+        public async Task<IEnumerable<ProblemShortDto>> GetAllAsync(int? userId)
         {
-            var token = await _context.Tokens
-                .FirstOrDefaultAsync(t => t.IpAddress == ip && t.IsActive == true);
-
             var ret = new List<ProblemShortDto>();
 
             foreach (var x in await _context.Problems.Include(p => p.Topics).ToListAsync())
@@ -70,17 +67,17 @@ namespace OJudge.Services
 
                 nx.IsSubmitted = nx.IsSolved = false;
 
-                if (token is not null)
+                if (userId.HasValue)
                 {
                     var sub = await _context.Submissions
-                        .FirstOrDefaultAsync(s => s.UserId == token.UserId && s.ProblemId == nx.Id && s.VerdictId == 8);
+                        .FirstOrDefaultAsync(s => s.UserId == userId && s.ProblemId == nx.Id && s.VerdictId == 8);
                     
                     if (sub is not null)
                         nx.IsSubmitted = nx.IsSolved = true;
                     else
                     {
                         sub = await _context.Submissions
-                            .FirstOrDefaultAsync(s => s.UserId == token.UserId && s.ProblemId == nx.Id);
+                            .FirstOrDefaultAsync(s => s.UserId == userId && s.ProblemId == nx.Id);
                         if (sub is not null)
                             nx.IsSubmitted = true;
                     }
@@ -97,11 +94,8 @@ namespace OJudge.Services
             return ret;
         }
 
-        public async Task<IEnumerable<ProblemShortDto>> GetAllByFilterAsync(string? str, int minDifficulty, int maxDifficulty, string solved, string? ip)
+        public async Task<IEnumerable<ProblemShortDto>> GetAllByFilterAsync(string? str, int minDifficulty, int maxDifficulty, string solved, int? userId)
         {
-
-            var token = await _context.Tokens
-                .FirstOrDefaultAsync(t => t.IpAddress == ip && t.IsActive == true);
 
             var problems = await _context.Problems
                 .Where(p => str == null || str == string.Empty || p.Title.Contains(str))
@@ -122,17 +116,17 @@ namespace OJudge.Services
                 };
                 nx.IsSubmitted = nx.IsSolved = false;
 
-                if (token is not null)
+                if (userId.HasValue)
                 {
                     var sub = await _context.Submissions
-                        .FirstOrDefaultAsync(s => s.UserId == token.UserId && s.ProblemId == nx.Id && s.VerdictId == 8);
+                        .FirstOrDefaultAsync(s => s.UserId == userId && s.ProblemId == nx.Id && s.VerdictId == 8);
 
                     if (sub is not null)
                         nx.IsSubmitted = nx.IsSolved = true;
                     else
                     {
                         sub = await _context.Submissions
-                            .FirstOrDefaultAsync(s => s.UserId == token.UserId && s.ProblemId == nx.Id);
+                            .FirstOrDefaultAsync(s => s.UserId == userId && s.ProblemId == nx.Id);
                         if (sub is not null)
                             nx.IsSubmitted = true;
                     }
@@ -143,13 +137,13 @@ namespace OJudge.Services
                     nx.TopicShortTitle.Add(t.ShortTitle);
                 }
 
-                if (token is null)
+                if (!userId.HasValue)
                 {
                     ret.Add(nx);
                 } else {
 
                     var sub = await _context.Submissions
-                            .FirstOrDefaultAsync(s => s.VerdictId == 8 && s.UserId == token.UserId && s.ProblemId == nx.Id);
+                            .FirstOrDefaultAsync(s => s.VerdictId == 8 && s.UserId == userId && s.ProblemId == nx.Id);
                     if (solved == "true" && sub is not null) ret.Add(nx);
                     if (solved == "false" && sub is null) ret.Add(nx);
                     if (solved != "true" && solved != "false") ret.Add(nx);
@@ -323,11 +317,8 @@ namespace OJudge.Services
             //return Problem_To_ProblemDto(problem);
         }
 
-        public async Task<IEnumerable<ProblemShortDto>> GetAllByTopicAsync(int topicId, string? ip)
+        public async Task<IEnumerable<ProblemShortDto>> GetAllByTopicAsync(int topicId, int? userId)
         {
-
-            var token = await _context.Tokens
-                .FirstOrDefaultAsync(t => t.IpAddress == ip && t.IsActive == true);
 
             var ans = new List<ProblemShortDto>();
 
@@ -345,17 +336,17 @@ namespace OJudge.Services
                     Difficulty = x.Difficulty
                 };
 
-                if (token is not null)
+                if (userId.HasValue)
                 {
                     var sub = await _context.Submissions
-                        .FirstOrDefaultAsync(s => s.UserId == token.UserId && s.ProblemId == nx.Id && s.VerdictId == 8);
+                        .FirstOrDefaultAsync(s => s.UserId == userId && s.ProblemId == nx.Id && s.VerdictId == 8);
 
                     if (sub is not null)
                         nx.IsSubmitted = nx.IsSolved = true;
                     else
                     {
                         sub = await _context.Submissions
-                            .FirstOrDefaultAsync(s => s.UserId == token.UserId && s.ProblemId == nx.Id);
+                            .FirstOrDefaultAsync(s => s.UserId == userId && s.ProblemId == nx.Id);
                         if (sub is not null)
                             nx.IsSubmitted = true;
                     }

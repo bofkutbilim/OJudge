@@ -16,7 +16,7 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261126163643_InitialPostgreSql";
+    public override string LastMigrationId => "20261127000000_JwtSessionsAndRoles";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -259,31 +259,25 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
                 b.ToTable("Tests");
             });
 
-        modelBuilder.Entity("OJudge.Models.Token", b =>
+        modelBuilder.Entity("OJudge.Models.JwtSession", b =>
             {
-                var id = b.Property<int>("Id")
-                    .ValueGeneratedOnAdd()
-                    .HasColumnType("integer");
+                b.Property<Guid>("Id")
+                    .ValueGeneratedNever()
+                    .HasColumnType("uuid");
 
-                NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(id);
+                b.Property<DateTime>("ExpiresAt")
+                    .HasColumnType("timestamp with time zone");
 
-                b.Property<string>("IpAddress")
-                    .HasColumnType("text");
-
-                b.Property<bool?>("IsActive")
-                    .HasColumnType("boolean");
-
-                b.Property<string>("MyToken")
-                    .HasColumnType("text");
-
-                b.Property<int?>("UserId")
+                b.Property<int>("UserId")
                     .HasColumnType("integer");
 
                 b.HasKey("Id");
 
+                b.HasIndex("ExpiresAt");
+
                 b.HasIndex("UserId");
 
-                b.ToTable("Tokens");
+                b.ToTable("JwtSessions");
             });
 
         modelBuilder.Entity("OJudge.Models.Topic", b =>
@@ -347,7 +341,7 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
                 b.Property<string>("PhotoPath")
                     .HasColumnType("text");
 
-                b.Property<int?>("RoleId")
+                b.Property<int>("RoleId")
                     .HasColumnType("integer");
 
                 b.Property<int>("Solved")
@@ -362,6 +356,9 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
                 b.HasKey("Id");
 
                 b.HasIndex("CountryId");
+
+                b.HasIndex("NickName")
+                    .IsUnique();
 
                 b.HasIndex("OrganizationId");
 
@@ -383,6 +380,10 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
                     .HasColumnType("text");
 
                 b.HasKey("Id");
+
+                b.HasIndex("Title")
+                    .IsUnique()
+                    .HasFilter("\"Title\" IN ('admin', 'user')");
 
                 b.ToTable("Roles");
             });
@@ -476,11 +477,13 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
                 b.Navigation("Problem");
             });
 
-        modelBuilder.Entity("OJudge.Models.Token", b =>
+        modelBuilder.Entity("OJudge.Models.JwtSession", b =>
             {
                 b.HasOne("OJudge.Models.User", "User")
-                    .WithMany("Tokens")
-                    .HasForeignKey("UserId");
+                    .WithMany()
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
                 b.Navigation("User");
             });
@@ -508,7 +511,9 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
 
                 b.HasOne("OJudge.Models.UserRole", "Role")
                     .WithMany("Users")
-                    .HasForeignKey("RoleId");
+                    .HasForeignKey("RoleId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
 
                 b.Navigation("Country");
 
@@ -559,8 +564,6 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
         modelBuilder.Entity("OJudge.Models.User", b =>
             {
                 b.Navigation("Submissions");
-
-                b.Navigation("Tokens");
             });
 
         modelBuilder.Entity("OJudge.Models.UserRole", b =>

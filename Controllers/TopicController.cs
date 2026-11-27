@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using OJudge.Services;
 using OJudge.Models;
 using OJudge.Dtos;
@@ -28,6 +29,7 @@ namespace OJudge.Controllers
             return topic is null ? NotFound() : Ok(topic);
         }
 
+        [Authorize(Roles = AuthRoles.Admin)]
         [HttpPost("post{mainTopicId}")]
         public async Task<ActionResult<Topic>> CreateTopic(int mainTopicId, CreateTopicDto dto)
         {
@@ -36,6 +38,7 @@ namespace OJudge.Controllers
             return Ok(created);
         }
 
+        [Authorize(Roles = AuthRoles.Admin)]
         [HttpPut("update{id}")]
         public async Task<ActionResult<Topic>> UpdateTopic(int id, UpdateTopicDto dto)
         {
@@ -44,6 +47,7 @@ namespace OJudge.Controllers
             return updated is null ? NotFound() : Ok(updated);
         }
 
+        [Authorize(Roles = AuthRoles.Admin)]
         [HttpDelete("delete{id}")]
         public async Task<ActionResult<Topic>> DeleteTopic(int id)
         {

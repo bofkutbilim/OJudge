@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { api, pageId, useResource } from '../api.js'
+import { api, pageId, useResource, useSession } from '../api.js'
 import { ResourceState } from '../components.jsx'
 import { ActionForm, RemoveButton } from '../forms.jsx'
 import { ProblemTable } from './judge/ProblemTable.jsx'
@@ -12,7 +12,7 @@ function TopicsLink() {
   return <a className="topics-back" href={topicsUrl}>← Все темы</a>
 }
 
-function TopicGroup({ group, index, reload }) {
+function TopicGroup({ group, index, reload, isAdmin }) {
   async function remove(path) {
     await api(path, { method: 'DELETE' })
     reload()
@@ -21,12 +21,12 @@ function TopicGroup({ group, index, reload }) {
     <section className="panel topic-group">
       <div className="topic-group-heading">
         <h2>{index + 1}. {group.title}</h2>
-        <div className="actions">
+        {isAdmin && <div className="actions">
           <a className="button secondary" href={`/maintopics/addtopic.html?id=${group.id}`}>Добавить подтему</a>
           <a className="icon-button" href={`/maintopics/edit.html?id=${group.id}`} aria-label={`Изменить тему «${group.title}»`} title="Изменить тему">✎</a>
           <RemoveButton label={`Удалить тему «${group.title}»`} question={`Удалить тему «${group.title}»?`}
             onRemove={() => remove(`maintopic/delete${group.id}`)} />
-        </div>
+        </div>}
       </div>
       {group.topics.length === 0 ? <p className="empty">В этой теме пока нет подтем.</p> : (
         <div className="table-wrap">
@@ -35,7 +35,7 @@ function TopicGroup({ group, index, reload }) {
               <tr>
                 <th scope="col">№</th><th scope="col">Название</th>
                 <th scope="col">Undefined</th><th scope="col">Easy</th><th scope="col">Medium</th><th scope="col">Hard</th>
-                <th scope="col">Действия</th>
+                {isAdmin && <th scope="col">Действия</th>}
               </tr>
             </thead>
             <tbody>
@@ -44,13 +44,13 @@ function TopicGroup({ group, index, reload }) {
                   <td>{position + 1}</td>
                   <td><a href={`/topic.html?id=${topic.id}`}>{topic.title}</a></td>
                   <td>{topic.undefined}</td><td>{topic.easy}</td><td>{topic.medium}</td><td>{topic.hard}</td>
-                  <td>
+                  {isAdmin && <td>
                     <div className="table-actions">
                       <a className="icon-button" href={`/topics/edit.html?id=${topic.id}`} aria-label={`Изменить подтему «${topic.title}»`} title="Изменить подтему">✎</a>
                       <RemoveButton label={`Удалить подтему «${topic.title}»`} question={`Удалить подтему «${topic.title}»?`}
                         onRemove={() => remove(`topic/delete${topic.id}`)} />
                     </div>
-                  </td>
+                  </td>}
                 </tr>
               ))}
             </tbody>
@@ -62,6 +62,7 @@ function TopicGroup({ group, index, reload }) {
 }
 
 export function TopicsPage() {
+  const { isAdmin } = useSession()
   const groups = useResource('maintopic/get')
   const [creating, setCreating] = useState(false)
 
@@ -77,12 +78,12 @@ export function TopicsPage() {
     <div className="stack">
       <div className="page-heading">
         <h1>Темы</h1>
-        <button type="button" className="button" onClick={() => setCreating(true)}>Добавить тему</button>
+        {isAdmin && <button type="button" className="button" onClick={() => setCreating(true)}>Добавить тему</button>}
       </div>
       <ResourceState resource={groups} />
       {groups.data?.length === 0 && <p className="panel empty">Тем пока нет.</p>}
-      {groups.data?.map((group, index) => <TopicGroup key={group.id} group={group} index={index} reload={groups.reload} />)}
-      {creating && (
+      {groups.data?.map((group, index) => <TopicGroup key={group.id} group={group} index={index} reload={groups.reload} isAdmin={isAdmin} />)}
+      {isAdmin && creating && (
         <ActionForm dialogTitle="Добавить тему" onClose={() => setCreating(false)} onSave={addTopic} label="Добавить">
           <label className="field">Название темы<input name="title" required /></label>
         </ActionForm>

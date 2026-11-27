@@ -1,9 +1,15 @@
-﻿namespace OJudge.Dtos
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace OJudge.Dtos;
+
+public sealed class CreateUserDto
 {
-    public class CreateUserDto
-    {
-        public required string NickName { get; set; }
-        public required string Email { get; set; }
-        public required string Password { get; set; }
-    }
+    [Required, StringLength(50)]
+    public required string NickName { get; set; }
+
+    [Required, EmailAddress]
+    public required string Email { get; set; }
+
+    [Required, StringLength(50)]
+    public required string Password { get; set; }
 }

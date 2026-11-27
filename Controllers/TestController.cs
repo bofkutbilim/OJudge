@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OJudge.Dtos;
 using OJudge.Models;
@@ -7,6 +8,7 @@ using OJudge.Services;
 namespace OJudge.Controllers
 {
     [Route("api/test")]
+    [Authorize(Roles = AuthRoles.Admin)]
     [ApiController]
     public class TestController : ControllerBase
     {

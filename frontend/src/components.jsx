@@ -1,11 +1,35 @@
 import { useEffect, useId, useRef } from 'react'
-import { SessionContext, useResource } from './api.js'
+import { clearSession, SessionContext, useResource, useSession, useStoredSession } from './api.js'
 
 export function SessionProvider({ children }) {
-  const { data, error, loading, reload } = useResource('user/isactive')
-  const guest = error?.status === 400 && error.message === 'Not Active'
-  const session = { user: data?.message === 'Active' ? data : null, loading, error: guest ? null : error, reload }
+  const stored = useStoredSession()
+  const { data, error, loading, reload } = useResource(stored ? 'user/isactive' : null)
+  useEffect(() => {
+    if (!stored) return
+    const remaining = Math.max(0, Date.parse(stored.expiresAt) - Date.now())
+    const timer = window.setTimeout(() => clearSession(stored.accessToken), remaining)
+    return () => window.clearTimeout(timer)
+  }, [stored])
+  useEffect(() => {
+    function restore(event) {
+      if (event.persisted) window.location.reload()
+    }
+    window.addEventListener('pageshow', restore)
+    return () => window.removeEventListener('pageshow', restore)
+  }, [])
+  const user = data?.message === 'Active' ? data : null
+  const session = { user, isAdmin: user?.userRole === 'admin', loading, error, reload }
   return <SessionContext.Provider value={session}>{children}</SessionContext.Provider>
+}
+
+export function EditorAccess({ ownerId, children }) {
+  const session = useSession()
+  if (session.loading || session.error) return <ResourceState resource={session} />
+  if (session.isAdmin || (ownerId && String(session.user?.userId) === ownerId)) return children
+  return <section className="panel narrow">
+    <h1>Доступ к редактированию</h1>
+    {session.user ? <p>Недостаточно прав.</p> : <a href="/login.html">Войти в аккаунт</a>}
+  </section>
 }
 
 export function ResourceState({ resource }) {

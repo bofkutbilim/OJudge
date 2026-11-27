@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OJudge.Data;
@@ -25,8 +26,7 @@ namespace OJudge.Controllers
         [HttpGet("get")]
         public async Task<ActionResult<IEnumerable<ProblemShortDto>>> GetAllProblems()
         {
-            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-            return Ok(await _problemService.GetAllAsync(ip));
+            return Ok(await _problemService.GetAllAsync(User.GetUserId()));
         }
 
         /// <summary>
@@ -42,23 +42,23 @@ namespace OJudge.Controllers
         [HttpGet("get/filter/{minDif}/{maxDif}/{solved}")]
         public async Task<ActionResult<IEnumerable<ProblemShortDto>>> GetProblemsByFilter(int minDif, int maxDif, string solved, [FromQuery] string? str)
         {
-            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-            return Ok(await _problemService.GetAllByFilterAsync(str, minDif, maxDif, solved, ip));
+            return Ok(await _problemService.GetAllByFilterAsync(str, minDif, maxDif, solved, User.GetUserId()));
         }
 
         [HttpGet("get/bytopic{topicId}")]
         public async Task<ActionResult<IEnumerable<ProblemShortDto>>> GetProblemByTopicId(int topicId)
         {
-            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-            return Ok(await _problemService.GetAllByTopicAsync(topicId, ip));
+            return Ok(await _problemService.GetAllByTopicAsync(topicId, User.GetUserId()));
         }
 
+        [Authorize(Roles = AuthRoles.Admin)]
         [HttpGet("get/tests{id}")]
         public async Task<ActionResult<IEnumerable<Test>>> GetProblemTests(int id)
         {
             return Ok(await _problemService.GetTestsAsync(id));
         }
 
+        [Authorize(Roles = AuthRoles.Admin)]
         [HttpPost("create")]
         public async Task<ActionResult<ProblemShortDto>> CreateProblem(CreateProblemDto dto)
         {
@@ -70,6 +70,7 @@ namespace OJudge.Controllers
         /// <summary>
         /// удалить задачу по id
         /// </summary>
+        [Authorize(Roles = AuthRoles.Admin)]
         [HttpDelete("delete{id}")]
         public async Task<ActionResult<ProblemShortDto>> DeleteProblem(int id)
         {
@@ -80,6 +81,7 @@ namespace OJudge.Controllers
         /// <summary>
         /// Изменение задачи
         /// </summary>
+        [Authorize(Roles = AuthRoles.Admin)]
         [HttpPut("update{id}")]
         public async Task<ActionResult<ProblemShortDto>> UpdateProblem(int id, UpdateProblemDto dto)
         {
@@ -89,6 +91,7 @@ namespace OJudge.Controllers
             return updated is null ? NotFound() : Ok(new { problem = updated, message = "Изменён успешно!" });
         }
 
+        [Authorize(Roles = AuthRoles.Admin)]
         [HttpPut("addtopic{id}/{topicId}")]
         public async Task<ActionResult<ProblemDto?>> AddTopicToProblem(int id, int topicId)
         {
@@ -96,6 +99,7 @@ namespace OJudge.Controllers
             return updated is null ? NotFound() : Ok(new { problem = updated, message = "Тема добавлена успешно" });
         }
 
+        [Authorize(Roles = AuthRoles.Admin)]
         [HttpDelete("deletetopic{id}/{topicId}")]
         public async Task<ActionResult<ProblemDto?>> DeleteTopicFromProblem(int id, int topicId)
         {
@@ -108,6 +112,7 @@ namespace OJudge.Controllers
             return Ok(await _problemService.GetTopicsAsync(id));
         }
 
+        [Authorize(Roles = AuthRoles.Admin)]
         [HttpPut("addsection{id}")]
         public async Task<ActionResult<ProblemDto>> AddSectionToProblem(int id, CreateProblemInformationDto dto) {
             if (dto is null) return BadRequest(new { message = "Введите данные" });
@@ -116,6 +121,7 @@ namespace OJudge.Controllers
         }
 
 
+        [Authorize(Roles = AuthRoles.Admin)]
         [HttpPut("addtest{id}")]
         public async Task<ActionResult<Test>> AddTestToProblem(int id, CreateTestDto dto)
         {

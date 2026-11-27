@@ -21,6 +21,7 @@ namespace OJudge.Services
                     CreateNoWindow = true
                 };
 
+                JudgeProcessEnvironment.LimitToToolchain(compile);
                 using var compileProc = Process.Start(compile);
                 var errorOutput = await compileProc.StandardError.ReadToEndAsync();
                 await compileProc.WaitForExitAsync();

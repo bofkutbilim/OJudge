@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Identity;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using OJudge.Data;
 using OJudge.Dtos;
@@ -9,8 +10,12 @@ namespace OJudge.Services
     public class UserService : IUserService
     {
         private readonly AppDbContext _context;
-        public UserService(AppDbContext context) {
+        private readonly IPasswordHasher<User> _hasher;
+
+        public UserService(AppDbContext context, IPasswordHasher<User> hasher)
+        {
             _context = context;
+            _hasher = hasher;
         }
 
         public async Task<IEnumerable<UserRanklistDto>> GetAllAsync()
@@ -73,9 +78,11 @@ namespace OJudge.Services
                 .Include(u => u.Country)
                 .FirstOrDefaultAsync(u => u.Id == id);
 
-            if (user is null)
-                return null;
+            return user is null ? null : ToProfile(user);
+        }
 
+        private static UserProfileDto ToProfile(User user)
+        {
             return new UserProfileDto
             {
                 Id = user.Id,
@@ -92,142 +99,106 @@ namespace OJudge.Services
                 Submitted = user.Submitted
             };
         }
-        public async Task<User>? CreateAsync(CreateUserDto dto)
+
+        public async Task<UserProfileDto?> CreateAsync(CreateUserDto dto, CancellationToken ct)
         {
-            if (await _context.Users
-                .FirstOrDefaultAsync(u => u.NickName == dto.NickName) is not null)
+            if (await _context.Users.AnyAsync(u => u.NickName == dto.NickName, ct))
                 return null;
 
             var user = new User
             {
                 NickName = dto.NickName,
-                RoleId = 1,
-                Role = await _context.Roles.FindAsync(1),
-                Organization = await _context.Organizations.FindAsync(1),
-                Country = await _context.Countries.FindAsync(1),
-                Solved = 0,
-                Submitted = 0,
                 EMail = dto.Email,
-                PasswordHash = MyHashService.CreateHash(dto.Password)
+                Role = await _context.Roles.SingleAsync(r => r.Title == AuthRoles.User, ct),
+                Organization = await _context.Organizations.FindAsync([1], ct),
+                Country = await _context.Countries.FindAsync([1], ct)
             };
+            user.PasswordHash = _hasher.HashPassword(user, dto.Password);
+            _context.Users.Add(user);
 
-            await _context.Users.AddAsync(user);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+                   { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "IX_Users_NickName" })
+            {
+                return null;
+            }
 
-            return user;
+            return ToProfile(user);
         }
 
-        public async Task<User?> UpdateAsync(int id, UpdateUserDto dto)
+        public async Task<UserProfileDto?> UpdateAsync(int id, UpdateUserDto dto, CancellationToken ct)
         {
             var user = await _context.Users
+                .Include(u => u.Role)
                 .Include(u => u.Organization)
                 .Include(u => u.Country)
-                .FirstOrDefaultAsync(u => u.Id == id);
+                .FirstOrDefaultAsync(u => u.Id == id, ct);
+            if (user is null) return null;
 
-            if (user is null)
-                return null;
-
-            var organization = await _context.Organizations.FindAsync(dto.OrganizationId);
-            var country = await _context.Countries.FindAsync(dto.CountryId);
-
-            if (organization is not null)
-            {
-                user.Organization = organization;
-                user.OrganizationId = organization.Id;
-            }
-
-            if (country is not null)
-            {
-                user.Country = country;
-                user.CountryId = country.Id;
-            }
-
+            var organization = await _context.Organizations.FindAsync([dto.OrganizationId], ct);
+            var country = await _context.Countries.FindAsync([dto.CountryId], ct);
+            if (organization is not null) user.Organization = organization;
+            if (country is not null) user.Country = country;
             if (dto.Name is not null) user.Name = dto.Name;
             if (dto.SurName is not null) user.Surname = dto.SurName;
-            
-            await _context.SaveChangesAsync();
 
-            return user;
+            await _context.SaveChangesAsync(ct);
+            return ToProfile(user);
         }
 
-        public async Task<User?> DeleteAsync(int id)
+        public async Task<bool> DeleteAsync(int id, CancellationToken ct)
         {
-            var user = await _context.Users.FindAsync(id);
-            if (user is null)
-                return null;
-
+            var user = await _context.Users.FindAsync([id], ct);
+            if (user is null) return false;
             _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
-
-            return user;
+            await _context.SaveChangesAsync(ct);
+            return true;
         }
-        public async Task<User?> LoginAsync(LoginDataDto dto, string? ip)
+
+        public async Task<User?> AuthenticateAsync(LoginDataDto dto, CancellationToken ct)
         {
-            var getHash = MyHashService.CreateHash(dto.Password);
+            var users = _context.Users.AsNoTracking().Include(u => u.Role);
+            var user = await users.SingleOrDefaultAsync(u => u.NickName == dto.NickName, ct);
+            if (user is null) return null;
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.NickName == dto.NickName && u.PasswordHash == getHash);
-
-            if (user is null)
-                return null;
-
-            var token = await _context.Tokens.FirstOrDefaultAsync(t => t.UserId == user.Id && t.IpAddress == ip);
-
-            if (token is null)
+            var result = VerifyPassword(user, dto.Password);
+            if (result == PasswordVerificationResult.Failed) return null;
+            if (result == PasswordVerificationResult.SuccessRehashNeeded)
             {
-                token = new Token
+                // Replace only the verified hash if another request changed credentials in the meantime.
+                var newHash = _hasher.HashPassword(user, dto.Password);
+                var changed = await _context.Users
+                    .Where(u => u.Id == user.Id && u.PasswordHash == user.PasswordHash)
+                    .ExecuteUpdateAsync(set => set.SetProperty(u => u.PasswordHash, newHash), ct);
+                if (changed == 0)
                 {
-                    UserId = user.Id,
-                    IpAddress = ip,
-                    MyToken = MyTokenService.GenerateToken()
-                };
-
-                await _context.Tokens.AddAsync(token);
-                await _context.SaveChangesAsync();
+                    var current = await users.SingleOrDefaultAsync(u => u.Id == user.Id, ct);
+                    return current is not null && VerifyPassword(current, dto.Password) != PasswordVerificationResult.Failed
+                        ? current : null;
+                }
+                user.PasswordHash = newHash;
             }
-            else if (token.IsActive == false)
-            {
-                token.IsActive = true;
-                await _context.SaveChangesAsync();
-            }
-
             return user;
         }
-        public async Task<User?> LogoutAsync(string? ip)
+
+        private PasswordVerificationResult VerifyPassword(User user, string password)
         {
+            // Only pre-JWT accounts have a decimal hash. Upgrade on their first successful login.
+            if (user.PasswordHash.Length is > 0 and <= 10 && user.PasswordHash.All(char.IsAsciiDigit))
+                return user.PasswordHash == MyHashService.CreateHash(password)
+                    ? PasswordVerificationResult.SuccessRehashNeeded : PasswordVerificationResult.Failed;
 
-            var token = await _context.Tokens
-                .Include(t => t.User)
-                .FirstOrDefaultAsync(t => t.IpAddress == ip && t.IsActive == true);
-
-            if (token is null)
-                return null;
-
-            token.IsActive = false;
-            await _context.SaveChangesAsync();
-
-            return token.User;
-        }
-        public async Task<UserActiveDto> CheckActiveAsync(string? ip)
-        {
-            var token = await _context.Tokens
-                .Include(t => t.User)
-                .ThenInclude(u => u.Role)
-                .FirstOrDefaultAsync(t => t.IpAddress == ip && t.IsActive == true);
-
-            if (token is null || token.IsActive == false)
-                return null;
-
-            if (token is not null && token.IsActive == true)
+            try
             {
-                return new UserActiveDto {
-                    message = "Active",
-                    userId = (int)token.UserId,
-                    userRole = token.User?.Role?.Title,
-                    userNickName = token.User.NickName
-                };
+                return _hasher.VerifyHashedPassword(user, user.PasswordHash, password);
             }
-
-            return null;
+            catch (FormatException)
+            {
+                return PasswordVerificationResult.Failed;
+            }
         }
     }
 }
